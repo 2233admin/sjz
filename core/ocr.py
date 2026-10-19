@@ -90,6 +90,30 @@ def available():
     return sys.platform == "win32"
 
 
+def backend_name():
+    """OCR 后端是否真的可用，以及用的哪个引擎。
+
+    打包成 exe 后最容易出问题的就是这条链（winrt 是惰性导入，
+    PyInstaller 静态分析扫不到，见 sjz.spec 的注释），所以要能自查。
+    """
+    if sys.platform != "win32":
+        return f"不可用（平台 {sys.platform}）"
+    mods = _load_winrt()
+    if mods is None:
+        return "不可用（winrt 没装上，或缺失 winrt._winrt_windows_*）"
+    try:
+        engine = _get_engine()
+    except Exception as e:
+        return f"不可用（建引擎失败：{type(e).__name__}: {e}）"
+    if engine is None:
+        return "不可用（没有可用的 OCR 语言包）"
+    try:
+        lang = engine.recognizer_language.language_tag
+    except Exception:
+        lang = "?"
+    return f"WinRT Windows.Media.Ocr（语言 {lang}）"
+
+
 def read_text(img, timeout=6.0):
     """img: BGR ndarray。返回 OCR 出来的原始文本（已清理空格），失败返回 ""。
 

@@ -16,10 +16,12 @@ dependencies = [
     "winrt-Windows.Globalization>=3.2,<4",
     "winrt-Windows.Foundation>=3.2,<4",
     "winrt-Windows.Foundation.Collections>=3.2,<4",
+    "pywebview>=6.2.1",
 ]
 
 [dependency-groups]
 dev = [
+    "pyinstaller>=6.22.3",
     "pytest>=9.1.1",
 ]
 

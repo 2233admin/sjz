@@ -161,3 +161,32 @@ def test_pick_never_selects_an_over_budget_item():
             "max_price": 5000}
     row, why, _ = market.pick(rows, task)
     assert row is None
+
+
+# ---------------------------------------------------------------- OCR 后端自检
+
+def test_backend_name_reports_the_real_engine():
+    """backend_name() 是打包后排查 OCR 的唯一手段，必须真的建起引擎。
+
+    打包成 exe 后最隐蔽的故障是惰性 winrt 没被打进去：模板匹配主路径照常
+    工作，只有 OCR 悄悄失败。所以这个自检不能只报「平台是 win32」。
+    """
+    from core import ocr
+    name = ocr.backend_name()
+    assert isinstance(name, str) and name
+    if sys.platform == "win32":
+        assert "WinRT" in name, f"OCR 后端没起来: {name}"
+        assert "zh-Hans" in name or "语言" in name, name
+
+
+def test_backend_name_matches_a_real_recognition():
+    """自检说可用，就必须真的能识别出东西 —— 否则自检在骗人。"""
+    from core import ocr
+    if "WinRT" not in ocr.backend_name():
+        pytest.skip("本机没有可用的 WinRT OCR")
+    if not os.path.exists(SHOT):
+        pytest.skip("测试截图不存在")
+    # 截图右上角有商品名，随便一块有字的区域即可
+    img = _roi()[0:120, 0:700]
+    text = ocr.read_text(img)
+    assert text.strip(), "自检报告可用，但识别结果是空的"
