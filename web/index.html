@@ -6,48 +6,69 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* 色值来自 GitHub Primer dark（官方 @primer/primitives 11.10.0）
-     和 Woodpecker CI 的日志配色。每一项都注明来源 token。 */
+  /* 配色来自《三角洲行动》实测采样，不是凭军事题材猜的军绿色：
+       交易行截图采样  #161C21 / #161E22 / #212A2E / #2D3B44
+       设置菜单截图    #181C25 / #161F26 / #232A34
+       国际官网计算样式 #0FF796（荧光绿） / #FF6C00（橙） / #E7E7E7 / #A6A6A6
+     状态色借用 BF4 社区采样与 Apex 主菜单采样，**是我们的重新映射**，
+     不是那两款游戏的官方错误色 token。
+     每个前景色对窗口底 #161C21 的 WCAG 对比度见 docs/frontend-redesign.md。 */
   :root {
-    /* —— 背景层级（Primer dark）—— */
-    --bg:        #0d1117;   /* bgColor-default */
-    --bg-inset:  #010409;   /* bgColor-inset：比底色更深，用于预览/日志底 */
-    --panel:     #151b23;   /* card-bgColor → bgColor-muted（比底色亮一档） */
-    --elevated:  #1c232c;   /* 自定：面板内再高一层（输入框、卡片头部） */
-    --hover:     #21262d;   /* control-bgColor-rest */
+    /* —— 背景层级：青黑，不是中性灰 —— */
+    --bg:        #161C21;   /* 窗口底（交易行截图采样） */
+    --bg-inset:  #10151A;   /* 预览/日志底：比窗口底更深 */
+    --panel:     #1F272D;   /* 卡片（交易行截图采样 #1F272D / #212A2E 之间） */
+    --elevated:  #232A34;   /* 高亮行（设置菜单截图采样） */
+    --hover:     #2D3B44;   /* 交易行右下角采样，用作 hover */
 
-    /* —— 边框（Primer dark）—— */
-    --line:      #3d444d;   /* borderColor-default */
-    --line-soft: #3d444db3; /* borderColor-muted，带透明度 */
-    --line-strong: #656c76; /* borderColor-emphasis */
+    /* —— 边框 —— */
+    --line:      #2A343C;
+    --line-soft: #2A343CB3;
+    --line-strong: #3E4C57;
 
-    /* —— 文字（Primer dark）—— */
-    --txt:       #f0f6fc;   /* fgColor-default */
-    --txt-2:     #9198a1;   /* fgColor-muted */
-    --txt-3:     #656c76;   /* fgColor-disabled */
+    /* —— 文字：实测对比度 —— */
+    --txt:       #E7E7E7;   /* 13.89:1（官网标题色） */
+    --txt-2:     #B8B8B8;   /*  8.66:1（官网表单文字色） */
+    --txt-3:     #A6A6A6;   /*  7.06:1（官网次级文字色） */
 
-    /* —— 语义色（Primer dark）—— */
-    --accent:    #1f6feb;   /* bgColor-accent-emphasis */
-    --accent-hi: #2a7aef;   /* control-checked-bgColor-hover */
-    --link:      #4493f8;   /* fgColor-accent */
-    --ok:        #3fb950;   /* fgColor-success */
-    --warn:      #d29922;   /* fgColor-attention */
-    --err:       #f85149;   /* fgColor-danger */
+    /* —— 主强调：荧光绿，负责“当前可执行的主动作” —— */
+    --accent:    #0FF796;   /* 12.08:1（官网实测） */
+    --accent-hi: #3DFFB0;   /* hover，同色系提亮 */
+    --accent-ink:#161C21;   /* 荧光绿上的文字必须用深色：白字只有 1.42:1 */
+    --link:      #0FF796;
 
-    /* —— 日志（Woodpecker console.css）—— */
-    --log-head:  #242526;
-    --log-body:  #121314;
-    --ansi-red:  #ff7070;
-    --ansi-green:#b0f986;
-    --ansi-yellow:#c6c502;
-    --ansi-blue: #8db7e0;
+    /* —— 语义色（我们的重新映射，非官方 token）—— */
+    --ok:        #95AF7D;   /*  7.12:1  BF4 友军绿采样 */
+    --warn:      #FFB500;   /*  9.71:1  BF4 直升机 HUD 琥珀采样 */
+    --err:       #FE4E1D;   /*  5.17:1  Apex 主菜单选中橙红采样 */
+    --info:      #77B0CA;   /*  7.24:1  BF4 队友蓝采样 */
+    --orange:    #FF6C00;   /*  6.05:1  官网橙色，备用强调 */
+
+    /* 危险色在卡片上只剩 4.56:1，余量极小 —— 不要给它加透明度，
+       也不要随手调亮卡片底，否则会跌破 4.5:1。 */
+    --err-ink:   #161C21;
+
+    /* —— 状态色配套的底与边（都是上面语义色的深色变体）—— */
+    --ok-bg:     #0A2B20;   --ok-line:   #0B6E4A;
+    --err-bg:    #2E1510;   --err-line:  #6E3A28;
+    --warn-bg:   #2A2100;   --warn-line: #6E5200;
+    --danger-bg: #3A1C14;   --danger-hi: #4E2418;
+    --accent-a:  #0FF79633;  /* 荧光绿 20% —— 拖框填充 / focus 光晕 */
+
+    /* —— 日志 —— */
+    --log-head:  #10151A;
+    --log-body:  #0C1014;
+    --ansi-red:  #FE4E1D;
+    --ansi-green:#95AF7D;
+    --ansi-yellow:#FFB500;
+    --ansi-blue: #77B0CA;
 
     /* —— 尺寸刻度 —— */
     --r-sm: 6px; --r-md: 8px; --r-lg: 10px;
-    --h-ctl: 30px;          /* 控件标准高度 */
-    --top-h: 48px;          /* 顶栏 */
-    --nav-w: 212px;         /* 左导航 */
-    --side-w: 304px;        /* 右状态栏 */
+    --h-ctl: 32px;
+    --top-h: 50px;
+    --nav-w: 212px;
+    --side-w: 304px;
   }
 
   /* 兼容旧变量名，JS 里内联用了 --dim / --line / --warn / --err */
@@ -70,8 +91,8 @@
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; }
   .brand .logo {
     width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0;
-    background: linear-gradient(135deg, var(--accent), #a371f7);
-    display: grid; place-items: center; font-size: 12px; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--info));
+    display: grid; place-items: center; font-size: 12px; color: var(--txt);
   }
   .brand span { color: var(--txt-2); font-weight: 400; }
 
@@ -83,7 +104,7 @@
     color: var(--txt-2);
   }
   .winbtns button:hover { background: var(--hover); color: var(--txt); }
-  #btnClose:hover { background: #b3261e; color: #fff; }
+  #btnClose:hover { background: var(--err); color: var(--txt); }
   /* 拖拽区容器里，按钮自身不能再是拖拽目标 */
   .no-drag { -webkit-app-region: no-drag; }
 
@@ -112,6 +133,15 @@
   /* 框选页要撑满，不要让预览被压扁 */
   #pane-setup.on { display: flex; flex-direction: column; }
 
+  /* 预览和步骤并排：向导不该要滚动。
+     预览够大（拖框是精细操作），步骤在右边一屏放完。 */
+  .setup-split {
+    flex: 1; min-height: 0; display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .setup-steps { overflow-y: auto; border-left: 1px solid var(--line); }
+  .setup-steps .sec { max-width: none; }
+
   /* ---- 右：状态 + 日志 ---- */
   .side {
     background: var(--panel); border-left: 1px solid var(--line);
@@ -128,16 +158,16 @@
   .side .sec { max-width: none; padding: 10px 12px; }
   .spacer { flex: 1; }
   .pill {
-    font-size: 11px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
-    background: #1f2937; color: var(--dim); border: 1px solid var(--line);
+    font-size: 11px; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+    background: var(--elevated); color: var(--txt-3); border: 1px solid var(--line);
   }
-  .pill.live { color: var(--ok); border-color: #1f6f3a; background: #0f2a18; }
-  .pill.err { color: var(--err); border-color: #6e2320; background: #2a1010; }
-  .pill.warn { color: var(--warn); border-color: #6b4a10; background: #2a1f08; }
+  .pill.live { color: var(--accent); border-color: var(--ok-line); background: var(--ok-bg); }
+  .pill.err { color: var(--err); border-color: var(--err-line); background: var(--err-bg); }
+  .pill.warn { color: var(--warn); border-color: var(--warn-line); background: var(--warn-bg); }
 
-  /* 框选页的预览区：拖框要精细，但也不能把下面的设置全挤出屏幕 */
+  /* 框选页的预览区：并排布局下它填满左列 */
   .canvas-wrap {
-    flex: 0 0 auto; height: 240px; position: relative; overflow: hidden;
+    flex: 1; min-height: 0; position: relative; overflow: hidden;
     background: var(--bg-inset);
     display: flex; align-items: center; justify-content: center;
   }
@@ -147,19 +177,19 @@
   .box { position: absolute; border: 2px solid; pointer-events: none; }
   .box.buy { border-color: var(--accent); }
   .box.confirm { border-color: var(--ok); }
-  .box.name { border-color: #a371f7; }
+  .box.name { border-color: var(--info); }
   .box.price { border-color: var(--warn); }
-  .box.clock { border-color: #39c5cf; }
+  .box.clock { border-color: var(--info); }
   .box .tag {
     position: absolute; top: -19px; left: -2px; font-size: 10px; padding: 1px 6px;
-    color: #fff; white-space: nowrap; border-radius: 3px 3px 0 0;
+    color: var(--txt); white-space: nowrap; border-radius: 3px 3px 0 0;
   }
   .box.buy .tag { background: var(--accent); }
   .box.confirm .tag { background: var(--ok); }
-  .box.name .tag { background: #a371f7; }
+  .box.name .tag { background: var(--info); }
   .box.price .tag { background: var(--warn); }
-  .box.clock .tag { background: #39c5cf; color: #00262a; }
-  #rubber { position: absolute; border: 1px dashed #fff; background: #2f81f733; display: none; pointer-events: none; }
+  .box.clock .tag { background: var(--info); color: var(--accent-ink); }
+  #rubber { position: absolute; border: 1px dashed var(--txt); background: var(--accent-a); display: none; pointer-events: none; }
 
   /* #tabs 现在是左导航的按钮容器：id 不变，JS 的切换逻辑照旧 */
   #tabs { display: flex; flex-direction: column; gap: 2px; }
@@ -193,6 +223,38 @@
     color: var(--txt-3); margin-bottom: 10px; font-weight: 600;
     display: flex; align-items: center; gap: 6px;
   }
+  /* 步骤号：向导用 */
+  .stepno {
+    display: inline-grid; place-items: center;
+    width: 18px; height: 18px; flex-shrink: 0;
+    border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+    font-size: 11px; font-weight: 700; letter-spacing: 0;
+  }
+  .pct {
+    font-variant-numeric: tabular-nums; color: var(--txt);
+    font-weight: 600; font-size: 13px;
+  }
+  .pct.good { color: var(--accent); }
+  .pct.low { color: var(--warn); }
+  /* 高级设置折叠区 */
+  .adv { border: 0; }
+  .adv summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--txt-3); font-weight: 600; user-select: none;
+  }
+  .adv summary::-webkit-details-marker { display: none; }
+  .adv summary::before {
+    content: "▸"; color: var(--txt-3); font-size: 10px;
+    transition: transform .15s;
+  }
+  .adv[open] summary::before { transform: rotate(90deg); }
+  .adv summary:hover { color: var(--txt-2); }
+  .adv .dnote {
+    margin-left: auto; text-transform: none; letter-spacing: 0;
+    font-size: 11px; color: var(--txt-3); font-weight: 400;
+  }
+  .advbody { padding-top: 12px; }
   .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .row:last-child { margin-bottom: 0; }
   .row label { flex: 1; color: var(--txt-2); font-size: 12px; }
@@ -200,25 +262,30 @@
   button {
     font: inherit; font-size: 12px; height: var(--h-ctl); padding: 0 12px;
     border-radius: var(--r-sm); cursor: pointer;
-    background: var(--hover); color: var(--txt); border: 1px solid var(--line);
+    background: var(--elevated); color: var(--txt); border: 1px solid var(--line);
     transition: background .12s, border-color .12s;
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   }
-  button:hover:not(:disabled) { background: #2a313c; border-color: var(--line-strong); }
-  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button:hover:not(:disabled) { background: var(--hover); border-color: var(--line-strong); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   button:disabled { opacity: .4; cursor: not-allowed; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  /* 主按钮是荧光绿实底 —— 文字必须用深色。
+     白字在 #0FF796 上只有 1.42:1，等于看不见。 */
+  button.primary {
+    background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+    font-weight: 600;
+  }
   button.primary:hover:not(:disabled) { background: var(--accent-hi); border-color: var(--accent-hi); }
-  button.danger { background: #3d1518; border-color: #6e2320; color: #ff7b72; }
-  button.danger:hover:not(:disabled) { background: #5a1d21; }
-  button.danger.armed { background: #b3261e; border-color: var(--err); color: #fff; }
+  button.danger { background: var(--danger-bg); border-color: var(--err-line); color: var(--err); }
+  button.danger:hover:not(:disabled) { background: var(--danger-hi); }
+  button.danger.armed { background: var(--err); border-color: var(--err); color: var(--err-ink); font-weight: 600; }
   button.wide { width: 100%; }
   button.tiny { height: 24px; padding: 0 8px; font-size: 11px; }
 
   .seg { display: flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
-  .seg button { border: 0; border-radius: 0; flex: 1; height: 28px; padding: 0; font-size: 11.5px; }
+  .seg button { border: 0; border-radius: 0; flex: 1; height: 30px; padding: 0; font-size: 11.5px; background: var(--panel); }
   .seg button + button { border-left: 1px solid var(--line); }
-  .seg button.on { background: var(--accent); color: #fff; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 
   input[type=range] { width: 100%; accent-color: var(--accent); }
   input[type=text], input[type=number], input[type=datetime-local], select {
@@ -227,7 +294,7 @@
     border: 1px solid var(--line); border-radius: var(--r-sm); width: 100%;
   }
   input:focus-visible, textarea:focus-visible, select:focus-visible {
-    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px #1f6feb33;
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-a);
   }
   input[type=number] { width: 78px; text-align: right; }
   input[type=datetime-local] { color-scheme: dark; }
@@ -256,10 +323,10 @@
     flex: 1; min-height: 0; overflow-y: auto;
     font: 11.5px/1.55 Consolas, "Cascadia Mono", monospace;
     background: var(--log-body); padding: 8px 10px;
-    color: #b9c0c9;
+    color: var(--txt-2);
   }
   #log div { white-space: pre-wrap; word-break: break-word; display: flex; gap: 8px; }
-  #log .t { color: #5a6169; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  #log .t { color: var(--txt-3); flex-shrink: 0; font-variant-numeric: tabular-nums; }
   #log .m { flex: 1; min-width: 0; }
   #log .info .m { color: var(--txt-2); }
   #log .hit .m { color: var(--ansi-green); }
@@ -273,12 +340,12 @@
     position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 12px);
     max-width: 560px; padding: 10px 16px; border-radius: var(--r-md); font-size: 12.5px;
     background: var(--elevated); color: var(--txt); border: 1px solid var(--line);
-    box-shadow: 0 8px 28px #0008; opacity: 0; pointer-events: none;
+    box-shadow: 0 8px 28px rgba(0,0,0,.55); opacity: 0; pointer-events: none;
     transition: opacity .18s, transform .18s; z-index: 99; text-align: center;
   }
   #toast.show { opacity: 1; transform: translate(-50%, 0); }
-  #toast.err { border-color: #6e2320; background: #2a1010; color: #ffb3ad; }
-  #toast.ok { border-color: #1f6f3a; background: #0f2a18; color: #8ee7a3; }
+  #toast.err { border-color: var(--err-line); background: var(--err-bg); color: var(--err); }
+  #toast.ok { border-color: var(--ok-line); background: var(--ok-bg); color: var(--accent); }
 
   /* 任务列表 */
   .task {
@@ -290,36 +357,36 @@
   .task .meta { font-size: 11px; color: var(--txt-2); display: flex; gap: 8px; flex-wrap: wrap; }
   .task .res { font-size: 11px; color: var(--warn); margin-top: 3px; }
   .st { font-size: 10px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
-  .st.pending { background: #1f2937; color: var(--dim); }
-  .st.armed { background: #2a1f08; color: var(--warn); }
-  .st.running { background: #0f2a18; color: var(--ok); }
-  .st.done { background: #0f2a18; color: var(--ok); }
-  .st.failed { background: #2a1010; color: var(--err); }
-  .st.skipped { background: #1f2937; color: var(--dim); }
+  .st.pending { background: var(--elevated); color: var(--dim); }
+  .st.armed { background: var(--warn-bg); color: var(--warn); }
+  .st.running { background: var(--ok-bg); color: var(--ok); }
+  .st.done { background: var(--ok-bg); color: var(--ok); }
+  .st.failed { background: var(--err-bg); color: var(--err); }
+  .st.skipped { background: var(--elevated); color: var(--dim); }
 
   .ocr-box {
-    background: #0d1117; border: 1px solid var(--line); border-radius: 6px;
-    padding: 7px 9px; font: 11.5px/1.5 Consolas, monospace; color: #a5d6ff;
+    background: var(--bg-inset); border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 9px; font: 11.5px/1.5 Consolas, monospace; color: var(--accent);
     min-height: 34px; word-break: break-all;
   }
   .lat-row { display: flex; justify-content: space-between; font-size: 11.5px; padding: 3px 0; }
   .lat-row .bar { height: 4px; background: var(--accent); border-radius: 2px; }
 
   /* 砖皮知识库 */
-  .sk { border: 1px solid var(--line); border-radius: 7px; padding: 8px 9px; margin-bottom: 7px; background: #0f151c; }
+  .sk { border: 1px solid var(--line); border-radius: 7px; padding: 8px 9px; margin-bottom: 7px; background: var(--bg-inset); }
   .sk .hd { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
-  .sk .ss { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #1f2937; color: var(--dim); white-space: nowrap; }
-  .sk .ss.cur { background: #0f2a18; color: var(--ok); }
-  .sk .sn { font-size: 12.5px; color: #fff; flex: 1; }
-  .sk .dt { font-size: 10.5px; color: #4b5563; font-variant-numeric: tabular-nums; }
+  .sk .ss { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: var(--elevated); color: var(--dim); white-space: nowrap; }
+  .sk .ss.cur { background: var(--ok-bg); color: var(--ok); }
+  .sk .sn { font-size: 12.5px; color: var(--txt); flex: 1; }
+  .sk .dt { font-size: 10.5px; color: var(--txt-3); font-variant-numeric: tabular-nums; }
   .sk .line { font-size: 11.5px; color: var(--txt); }
-  .sk .line b { color: #a5d6ff; font-weight: 600; }
+  .sk .line b { color: var(--accent); font-weight: 600; }
   .sk .sub { font-size: 10.5px; color: var(--dim); margin-top: 2px; }
-  .id-res { background: #0d1117; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; margin-top: 8px; font-size: 11.5px; line-height: 1.6; }
+  .id-res { background: var(--bg-inset); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; margin-top: 8px; font-size: 11.5px; line-height: 1.6; }
   .id-res .ok { color: var(--ok); }
   .id-res .no { color: var(--warn); }
   .tierline { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
-  .tierline span { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: #1f2937; color: var(--dim); }
+  .tierline span { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--elevated); color: var(--dim); }
 </style>
 </head>
 <body>
@@ -357,73 +424,92 @@
 
   <!-- ============ 框选 ============ -->
   <div class="pane on" id="pane-setup">
-    <div class="phead"><h1>框选区域</h1><span class="desc">在下面画面上拖框，框住要盯的按钮或文字</span></div>
-    <div class="canvas-wrap" id="wrap">
-      <img id="stream" alt="屏幕预览">
-      <canvas id="overlay"></canvas>
-      <div id="rubber"></div>
-    </div>
+    <div class="phead"><h1>教它认按钮</h1><span class="desc">三步，做完就能用</span></div>
+    <div class="setup-split">
+      <div class="canvas-wrap" id="wrap">
+        <img id="stream" alt="屏幕预览">
+        <canvas id="overlay"></canvas>
+        <div id="rubber"></div>
+      </div>
+      <div class="setup-steps">
     <div class="sec" style="max-width:none">
-      <h3>区域</h3>
+      <h3><span class="stepno">1</span>框住【购买】按钮</h3>
       <div class="seg" id="pickSeg">
         <button data-pick="buy" class="on">购买</button>
         <button data-pick="confirm">确认</button>
         <button data-pick="name">商品名</button>
         <button data-pick="price">价格</button>
       </div>
-      <div class="hint" id="pickHint">拖出<b>购买按钮</b>的范围。</div>
+      <div class="hint" id="pickHint">在上面画面上，用鼠标拖一个框，圈住<b>购买</b>按钮。</div>
       <div class="row" style="margin-top:9px">
-        <button class="wide" id="btnShot">把框内画面存成模板</button>
+        <button class="wide primary" id="btnShot">记住它长什么样</button>
       </div>
-      <div class="row" style="gap:8px;align-items:flex-start;margin-top:8px">
+      <div class="hint" style="margin-top:6px">框比按钮大一点点就行。记住之后，游戏里这个按钮一变样（能买了），它就会开抢。</div>
+      <div class="row" style="gap:8px;align-items:flex-start;margin-top:10px">
         <div style="flex:1">
-          <img id="thumb-buy" class="tpl-thumb missing" alt="购买模板">
-          <div class="hint" style="margin-top:2px;text-align:center;font-size:10px">购买</div>
+          <img id="thumb-buy" class="tpl-thumb missing" alt="购买按钮的样子">
+          <div class="hint" style="margin-top:2px;text-align:center;font-size:10px">购买按钮</div>
         </div>
         <div style="flex:1">
-          <img id="thumb-confirm" class="tpl-thumb missing" alt="确认模板">
-          <div class="hint" style="margin-top:2px;text-align:center;font-size:10px">确认</div>
+          <img id="thumb-confirm" class="tpl-thumb missing" alt="确认按钮的样子">
+          <div class="hint" style="margin-top:2px;text-align:center;font-size:10px">确认按钮</div>
         </div>
       </div>
     </div>
 
     <div class="sec" style="max-width:none">
-      <h3>读取游戏内文字</h3>
+      <h3><span class="stepno">2</span>让它认得商品名（可选）</h3>
       <div class="row">
-        <button class="wide" id="btnRead">读一次商品名 / 价格</button>
+        <button class="wide" id="btnRead">读一下现在是什么商品</button>
       </div>
       <div class="ocr-box" id="ocrOut">（还没读过）</div>
-      <div class="kv" style="margin-top:7px"><span>匹配到</span><span id="ocrMatch">--</span></div>
-      <div class="hint">框选「商品名」和「价格」区域后点上面按钮。中文用 Windows 自带 OCR，不用装 Tesseract。</div>
+      <div class="kv" style="margin-top:7px"><span>认出的商品</span><span id="ocrMatch">--</span></div>
+      <div class="hint">想让它自动认商品名，就先在上面把「商品名」「价格」也框出来。不框也能抢，只是不会自己填名字。</div>
     </div>
 
     <div class="sec" style="max-width:none">
-      <h3>触发方式</h3>
+      <h3><span class="stepno">3</span>什么时候开抢</h3>
       <div class="seg" id="trigSeg">
-        <button data-trig="vanish" class="on">等按钮消失</button>
-        <button data-trig="appear">等按钮出现</button>
+        <button data-trig="vanish" class="on">按钮变了就抢</button>
+        <button data-trig="appear">按钮出现就抢</button>
       </div>
-      <div class="hint" id="trigHint">模板截的是<b>开卖前</b>的占位按钮（如"公示中"），开卖瞬间它消失 → 触发。</div>
+      <div class="hint" id="trigHint">刚才记住的是<b>开卖前</b>的按钮样子（比如显示"公示中"）。开卖那一刻它会变样 —— 一变就开抢。</div>
     </div>
 
     <div class="sec" style="max-width:none">
-      <h3>参数</h3>
-      <div class="row"><label>匹配阈值</label><span id="thVal" style="color:#fff">0.85</span></div>
-      <input type="range" id="th" min="0.5" max="0.99" step="0.01" value="0.85">
-      <div class="row" style="margin-top:9px"><label>点击频率 (Hz)</label><input type="number" id="hz" value="50" min="1" max="500"></div>
-      <div class="row"><label>确认点击次数</label><input type="number" id="cc" value="20" min="1" max="200"></div>
-      <div class="row"><label>等弹窗超时 (s)</label><input type="number" id="ft" value="8" min="1" max="60" step="0.5"></div>
+      <h3>现在像不像</h3>
+      <div class="hint" style="margin-top:0;margin-bottom:9px">框选完看一眼：数越接近 100% 说明框得越准。低于 85% 就把框重新拉一次，紧一点。</div>
       <div class="row">
-        <label>左上角急停</label>
-        <div class="seg" style="width:88px" id="fsSeg">
-          <button data-fs="1" class="on">开</button><button data-fs="0">关</button>
-        </div>
-      </div>
-      <div class="row"><label>当前相关度</label>
-        <span id="probeBuy" style="font-variant-numeric:tabular-nums">--</span><span style="color:var(--dim)">/</span>
-        <span id="probeConfirm" style="font-variant-numeric:tabular-nums">--</span>
+        <label>购买按钮</label>
+        <span class="pct" id="probeBuy">--</span>
       </div>
       <div class="meter"><i id="probeBar" style="width:0"></i></div>
+      <div class="row" style="margin-top:9px"><label>确认按钮</label>
+        <span class="pct" id="probeConfirm">--</span>
+      </div>
+    </div>
+
+    <div class="sec" style="max-width:none">
+      <details class="adv">
+        <summary>高级设置<span class="dnote">默认值一般不用改</span></summary>
+        <div class="advbody">
+          <div class="row"><label>多像才算数</label><span id="thVal" class="pct">85%</span></div>
+          <input type="range" id="th" min="0.5" max="0.99" step="0.01" value="0.85">
+          <div class="hint" style="margin-top:4px">调低更容易触发，但可能认错；调高更严，但可能错过。</div>
+          <div class="row" style="margin-top:12px"><label>每秒点几下</label><input type="number" id="hz" value="50" min="1" max="500"></div>
+          <div class="row"><label>确认按钮点几下</label><input type="number" id="cc" value="20" min="1" max="200"></div>
+          <div class="row"><label>等弹窗最多几秒</label><input type="number" id="ft" value="8" min="1" max="60" step="0.5"></div>
+          <div class="row">
+            <label>鼠标甩左上角急停</label>
+            <div class="seg" style="width:88px" id="fsSeg">
+              <button data-fs="1" class="on">开</button><button data-fs="0">关</button>
+            </div>
+          </div>
+          <div class="hint" style="margin-top:4px">抢的时候手忙不过来，把鼠标大力甩到屏幕左上角就能叫停。</div>
+        </div>
+      </details>
+    </div>
+      </div>
     </div>
   </div>
 
@@ -668,10 +754,10 @@ $('#pickSeg').addEventListener('click', e => {
   pick = b.dataset.pick;
   [...e.currentTarget.children].forEach(c => c.classList.toggle('on', c === b));
   const tips = {
-    buy: '拖出<b>购买按钮</b>的范围。框比按钮稍大一圈即可。',
-    confirm: '拖出<b>确认弹窗里那个确认按钮</b>的范围。',
-    name: '拖出<b>商品名称</b>那一行文字。用来读游戏里现在是什么商品。',
-    price: '拖出<b>价格</b>文字（可选）。',
+    buy: '在上面的画面上，用鼠标拖一个框，圈住<b>购买</b>按钮。',
+    confirm: '拖框圈住<b>确认弹窗里那个「确认」</b>按钮。',
+    name: '拖框圈住<b>商品名称</b>那一行字。这样它能自己认出是什么商品。',
+    price: '拖框圈住<b>价格</b>那串数字（可选）。',
   };
   $('#pickHint').innerHTML = tips[pick] || '';
   $('#btnShot').disabled = (pick !== 'buy' && pick !== 'confirm');
@@ -695,7 +781,7 @@ $('#fsSeg').addEventListener('click', e => {
 });
 
 $('#th').addEventListener('input', e => {
-  $('#thVal').textContent = (+e.target.value).toFixed(2);
+  $('#thVal').textContent = Math.round(+e.target.value * 100) + '%';
   api('/api/config', {threshold: +e.target.value});
 });
 $('#hz').addEventListener('change', e => api('/api/config', {click_hz: +e.target.value}));
@@ -844,7 +930,7 @@ function showBrick(r) {
     const craft = i === 0 && g.craft ? ` · ${g.craft}${g.wear || ''}` : (i === 0 && g.wear ? ` · ${g.wear} 成色` : '');
     return `<div style="margin-bottom:${i === r.options.length - 1 ? 0 : 7}px">
       <b>${escapeHtml(o.season)} ${escapeHtml(o.season_name)}</b> · ${badge}${weak} · 置信 ${o.confidence}
-      <div style="color:#a5d6ff">${escapeHtml(o.weapon)} - ${escapeHtml(o.skin)}${sub}${craft}</div>
+      <div style="color:var(--accent)">${escapeHtml(o.weapon)} - ${escapeHtml(o.skin)}${sub}${craft}</div>
       <div style="color:var(--dim);font-size:11px">${escapeHtml(o.date)}${o.note ? ' · ' + escapeHtml(o.note) : ''}</div>
     </div>`;
   }).join('');
@@ -930,7 +1016,7 @@ function showClock(c) {
   if (!c || c.at === null || c.at === undefined) { $('#clkOff').textContent = '--'; return; }
   const off = c.offset * 1000;
   $('#clkOff').textContent = `${off >= 0 ? '+' : ''}${off.toFixed(0)} ms`;
-  $('#clkOff').style.color = Math.abs(off) > 200 ? 'var(--warn)' : '#fff';
+  $('#clkOff').style.color = Math.abs(off) > 200 ? 'var(--warn)' : 'var(--txt)';
   $('#clkDelay').textContent = c.delay === null ? '--' : `${(c.delay*1000).toFixed(1)} ms`;
   $('#clkSrv').textContent = c.server || '--';
   const pill = $('#clockPill');
@@ -1048,13 +1134,19 @@ async function poll() {
 async function pollProbe() {
   try {
     const p = await api('/api/probe');
-    const f = v => v === null || v === undefined ? '--' : v.toFixed(3);
+    const f = v => (v === null || v === undefined) ? '--' : Math.round(v * 100) + '%';
     $('#probeBuy').textContent = f(p.buy);
     $('#probeConfirm').textContent = f(p.confirm);
     const best = Math.max(p.buy ?? 0, p.confirm ?? 0);
     const bar = $('#probeBar');
     bar.style.width = Math.min(100, best * 100) + '%';
-    bar.className = best >= (+$('#th').value) ? 'pass' : '';
+    // 像不像也顺便用颜色说话：够了绿、不够黄，不用玩家自己比对数字
+    const okNow = best >= (+$('#th').value);
+    bar.className = okNow ? 'pass' : '';
+    $('#probeBuy').className = 'pct' + (p.buy === null || p.buy === undefined ? ''
+      : (p.buy >= (+$('#th').value) ? ' good' : ' low'));
+    $('#probeConfirm').className = 'pct' + (p.confirm === null || p.confirm === undefined ? ''
+      : (p.confirm >= (+$('#th').value) ? ' good' : ' low'));
   } catch (e) {}
   setTimeout(pollProbe, 1500);
 }
@@ -1074,7 +1166,7 @@ function refreshThumbs() {
   const sc = await api('/api/screen');
   if (sc.size) $('#screenPill').textContent = sc.size.join('×');
 
-  $('#th').value = cfg.threshold; $('#thVal').textContent = (+cfg.threshold).toFixed(2);
+  $('#th').value = cfg.threshold; $('#thVal').textContent = Math.round(cfg.threshold * 100) + '%';
   $('#hz').value = cfg.click_hz;
   $('#cc').value = cfg.confirm_clicks;
   $('#ft').value = cfg.fire_timeout_s;
