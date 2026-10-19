@@ -1,7 +1,14 @@
 # 打包成桌面 exe
 
 成品是**单文件 exe**，双击即开原生窗口（内嵌系统 WebView2），不需要装 Python，
-也不用开浏览器。生成物在 `dist/SJZ控制台.exe`。
+也不用开浏览器。生成物在 `dist/SJZ-Control.exe`。
+
+```bat
+build.bat
+```
+
+`build.bat` 会依次做三件事：同步依赖 → 跑测试 → 打包。**测试不通过就不出 exe。**
+想跳过测试直接打，用：
 
 ```bat
 uv run pyinstaller sjz.spec --noconfirm
@@ -19,8 +26,26 @@ uv run pyinstaller sjz.spec --noconfirm
 `desktop.py` 还有 `--doctor`，打印运行时路径和 OCR 自检后退出，排查打包问题时用：
 
 ```bat
-"dist\SJZ控制台.exe" --doctor
+"dist\SJZ-Control.exe" --doctor
 ```
+
+## 出问题时看日志
+
+exe 是无控制台的（windowed），`print` 什么都看不见。所以 `desktop.py` 会把启动
+过程写进 **exe 同级的 `desktop.log`**：
+
+```
+03:19:03 --- 启动 (frozen=True) ---
+03:19:03 BASE=C:\Users\...\Temp\_MEI000153882
+03:19:05 选中端口 8991
+03:19:06 服务已就绪，开始建窗口
+03:19:06 create_window 返回
+03:19:06 调用 webview.start()
+```
+
+窗口起不来的典型症状是**双击后什么都没发生**。日志会写清楚停在哪一步：
+端口没选出来、服务没起来、还是 `webview.start()` 立刻返回（后者基本是
+WebView2 运行时缺失）。
 
 ## 打包时踩过的两个坑
 
@@ -39,7 +64,7 @@ uv run pyinstaller sjz.spec --noconfirm
 验证方式（不用开窗口）：
 
 ```bat
-"dist\SJZ控制台.exe" --doctor
+"dist\SJZ-Control.exe" --doctor
 # 应当看到：OCR 后端 = WinRT Windows.Media.Ocr（语言 zh-Hans-CN）
 ```
 
@@ -55,7 +80,7 @@ uv run pyinstaller sjz.spec --noconfirm
 ## 参数
 
 ```bat
-"dist\SJZ控制台.exe" --port 8777 --host 127.0.0.1 --width 1180 --height 800
+"dist\SJZ-Control.exe" --port 8777 --host 127.0.0.1 --width 1180 --height 800
 ```
 
 端口被占用时会自动往后找（最多试 20 个），不会弹错误让用户去杀进程。
