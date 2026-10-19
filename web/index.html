@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>SJZ 抢购控制台</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #263041; --txt: #c9d1d9;
+    --dim: #7d8797; --accent: #2f81f7; --ok: #3fb950; --warn: #d29922; --err: #f85149;
+  }
+  body {
+    background: var(--bg); color: var(--txt);
+    font: 13px/1.55 "Segoe UI", "Microsoft YaHei", sans-serif;
+    display: grid; grid-template-columns: 1fr 380px; height: 100vh; overflow: hidden;
+  }
+
+  .stage { display: flex; flex-direction: column; min-width: 0; }
+  .bar {
+    display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+    background: var(--panel); border-bottom: 1px solid var(--line); flex-shrink: 0;
+  }
+  .bar .title { font-weight: 600; }
+  .bar .title span { color: var(--accent); }
+  .spacer { flex: 1; }
+  .pill {
+    font-size: 11px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+    background: #1f2937; color: var(--dim); border: 1px solid var(--line);
+  }
+  .pill.live { color: var(--ok); border-color: #1f6f3a; background: #0f2a18; }
+  .pill.err { color: var(--err); border-color: #6e2320; background: #2a1010; }
+  .pill.warn { color: var(--warn); border-color: #6b4a10; background: #2a1f08; }
+
+  .canvas-wrap {
+    flex: 1; position: relative; overflow: hidden; background: #000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #stream { max-width: 100%; max-height: 100%; display: block; user-select: none; }
+  #overlay { position: absolute; cursor: crosshair; }
+
+  .box { position: absolute; border: 2px solid; pointer-events: none; }
+  .box.buy { border-color: var(--accent); }
+  .box.confirm { border-color: var(--ok); }
+  .box.name { border-color: #a371f7; }
+  .box.price { border-color: var(--warn); }
+  .box.clock { border-color: #39c5cf; }
+  .box .tag {
+    position: absolute; top: -19px; left: -2px; font-size: 10px; padding: 1px 6px;
+    color: #fff; white-space: nowrap;
+  }
+  .box.buy .tag { background: var(--accent); }
+  .box.confirm .tag { background: var(--ok); }
+  .box.name .tag { background: #a371f7; }
+  .box.price .tag { background: var(--warn); }
+  .box.clock .tag { background: #39c5cf; color: #00262a; }
+  #rubber { position: absolute; border: 1px dashed #fff; background: #2f81f733; display: none; pointer-events: none; }
+
+  .panel { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .tabs button {
+    flex: 1; border: 0; border-radius: 0; background: transparent; color: var(--dim);
+    padding: 10px 0; font-size: 12px; border-bottom: 2px solid transparent;
+  }
+  .tabs button.on { color: #fff; border-bottom-color: var(--accent); background: #1c2530; }
+  .pane { display: none; overflow-y: auto; flex: 1; }
+  .pane.on { display: block; }
+
+  .sec { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .sec h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .7px;
+    color: var(--dim); margin-bottom: 9px; font-weight: 600;
+  }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .row:last-child { margin-bottom: 0; }
+  .row label { flex: 1; color: var(--dim); font-size: 12px; }
+
+  button {
+    font: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px; cursor: pointer;
+    background: #21262d; color: var(--txt); border: 1px solid var(--line); transition: .12s;
+  }
+  button:hover:not(:disabled) { background: #2d333b; border-color: #3d4657; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover:not(:disabled) { background: #1f6feb; }
+  button.danger { background: #3d1518; border-color: #6e2320; color: #ff7b72; }
+  button.danger:hover:not(:disabled) { background: #5a1d21; }
+  button.danger.armed { background: #b3261e; border-color: #f85149; color: #fff; }
+  button.wide { width: 100%; }
+  button.tiny { padding: 3px 7px; font-size: 11px; }
+
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; flex: 1; padding: 5px 0; font-size: 11.5px; }
+  .seg button.on { background: var(--accent); color: #fff; }
+
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  input[type=text], input[type=number], input[type=datetime-local], select {
+    font: inherit; font-size: 12px; padding: 5px 8px; background: #0d1117;
+    color: var(--txt); border: 1px solid var(--line); border-radius: 5px; width: 100%;
+  }
+  input[type=number] { width: 70px; text-align: right; }
+  input[type=datetime-local] { color-scheme: dark; }
+  textarea {
+    font: inherit; font-size: 12px; padding: 6px 8px; background: #0d1117;
+    color: var(--txt); border: 1px solid var(--line); border-radius: 5px;
+    width: 100%; resize: vertical; color-scheme: dark;
+  }
+
+  .kv { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; gap: 8px; }
+  .kv span:last-child { color: #fff; font-variant-numeric: tabular-nums; text-align: right; }
+  .kv span:first-child { color: var(--dim); white-space: nowrap; }
+
+  .meter { height: 5px; background: #0d1117; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .meter i { display: block; height: 100%; background: var(--accent); transition: width .15s; }
+  .meter i.pass { background: var(--ok); }
+
+  .tpl-thumb {
+    width: 100%; height: 50px; object-fit: contain; background: #0d1117;
+    border: 1px solid var(--line); border-radius: 5px;
+  }
+  .tpl-thumb.missing { opacity: .22; }
+
+  #log {
+    font: 11px/1.5 Consolas, monospace; height: 170px; overflow-y: auto;
+    background: #0d1117; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+  }
+  #log div { white-space: pre-wrap; word-break: break-all; }
+  #log .t { color: #4b5563; }
+  #log .info { color: var(--dim); }
+  #log .hit { color: var(--ok); }
+  #log .warn { color: var(--warn); }
+  #log .error { color: var(--err); }
+
+  .hint { font-size: 11px; color: var(--dim); line-height: 1.5; margin-top: 7px; }
+  .hint b { color: #9aa4b2; font-weight: 600; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 12px);
+    max-width: 560px; padding: 9px 16px; border-radius: 8px; font-size: 12.5px;
+    background: #1f2937; color: #e6edf3; border: 1px solid var(--line);
+    box-shadow: 0 8px 28px #0008; opacity: 0; pointer-events: none;
+    transition: opacity .18s, transform .18s; z-index: 99; text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast.err { border-color: #6e2320; background: #2a1010; color: #ffb3ad; }
+  #toast.ok { border-color: #1f6f3a; background: #0f2a18; color: #8ee7a3; }
+
+  /* 任务列表 */
+  .task {
+    border: 1px solid var(--line); border-radius: 7px; padding: 8px 9px;
+    margin-bottom: 7px; background: #0f151c;
+  }
+  .task .top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .task .nm { font-size: 12.5px; color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task .meta { font-size: 11px; color: var(--dim); display: flex; gap: 8px; flex-wrap: wrap; }
+  .task .res { font-size: 11px; color: var(--warn); margin-top: 3px; }
+  .st { font-size: 10px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+  .st.pending { background: #1f2937; color: var(--dim); }
+  .st.armed { background: #2a1f08; color: var(--warn); }
+  .st.running { background: #0f2a18; color: var(--ok); }
+  .st.done { background: #0f2a18; color: var(--ok); }
+  .st.failed { background: #2a1010; color: var(--err); }
+  .st.skipped { background: #1f2937; color: var(--dim); }
+
+  .ocr-box {
+    background: #0d1117; border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 9px; font: 11.5px/1.5 Consolas, monospace; color: #a5d6ff;
+    min-height: 34px; word-break: break-all;
+  }
+  .lat-row { display: flex; justify-content: space-between; font-size: 11.5px; padding: 3px 0; }
+  .lat-row .bar { height: 4px; background: var(--accent); border-radius: 2px; }
+
+  /* 砖皮知识库 */
+  .sk { border: 1px solid var(--line); border-radius: 7px; padding: 8px 9px; margin-bottom: 7px; background: #0f151c; }
+  .sk .hd { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+  .sk .ss { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #1f2937; color: var(--dim); white-space: nowrap; }
+  .sk .ss.cur { background: #0f2a18; color: var(--ok); }
+  .sk .sn { font-size: 12.5px; color: #fff; flex: 1; }
+  .sk .dt { font-size: 10.5px; color: #4b5563; font-variant-numeric: tabular-nums; }
+  .sk .line { font-size: 11.5px; color: var(--txt); }
+  .sk .line b { color: #a5d6ff; font-weight: 600; }
+  .sk .sub { font-size: 10.5px; color: var(--dim); margin-top: 2px; }
+  .id-res { background: #0d1117; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; margin-top: 8px; font-size: 11.5px; line-height: 1.6; }
+  .id-res .ok { color: var(--ok); }
+  .id-res .no { color: var(--warn); }
+  .tierline { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+  .tierline span { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: #1f2937; color: var(--dim); }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="bar">
+    <div class="title">SJZ <span>抢购控制台</span></div>
+    <div class="pill" id="modePill">演练</div>
+    <div class="spacer"></div>
+    <div class="pill" id="clockPill">时钟 --</div>
+    <div class="pill" id="netPill">网络 --</div>
+    <div class="pill" id="screenPill">--</div>
+    <div class="pill" id="statePill">空闲</div>
+  </div>
+  <div class="canvas-wrap" id="wrap">
+    <img id="stream" alt="屏幕预览">
+    <canvas id="overlay"></canvas>
+    <div id="rubber"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="tabs" id="tabs">
+    <button data-tab="setup" class="on">框选</button>
+    <button data-tab="queue">任务队列</button>
+    <button data-tab="brick">砖皮</button>
+    <button data-tab="run">运行</button>
+  </div>
+
+  <!-- ============ 框选 ============ -->
+  <div class="pane on" id="pane-setup">
+    <div class="sec">
+      <h3>区域</h3>
+      <div class="seg" id="pickSeg">
+        <button data-pick="buy" class="on">购买</button>
+        <button data-pick="confirm">确认</button>
+        <button data-pick="name">商品名</button>
+        <button data-pick="price">价格</button>
+      </div>
+      <div class="hint" id="pickHint">拖出<b>购买按钮</b>的范围。</div>
+      <div class="row" style="margin-top:9px">
+        <button class="wide" id="btnShot">把框内画面存成模板</button>
+      </div>
+      <div class="row" style="gap:8px;align-items:flex-start;margin-top:8px">
+        <div style="flex:1">
+          <img id="thumb-buy" class="tpl-thumb missing" alt="购买模板">
+          <div class="hint" style="margin-top:2px;text-align:center;font-size:10px">购买</div>
+        </div>
+        <div style="flex:1">
+          <img id="thumb-confirm" class="tpl-thumb missing" alt="确认模板">
+          <div class="hint" style="margin-top:2px;text-align:center;font-size:10px">确认</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>读取游戏内文字</h3>
+      <div class="row">
+        <button class="wide" id="btnRead">读一次商品名 / 价格</button>
+      </div>
+      <div class="ocr-box" id="ocrOut">（还没读过）</div>
+      <div class="kv" style="margin-top:7px"><span>匹配到</span><span id="ocrMatch">--</span></div>
+      <div class="hint">框选「商品名」和「价格」区域后点上面按钮。中文用 Windows 自带 OCR，不用装 Tesseract。</div>
+    </div>
+
+    <div class="sec">
+      <h3>触发方式</h3>
+      <div class="seg" id="trigSeg">
+        <button data-trig="vanish" class="on">等按钮消失</button>
+        <button data-trig="appear">等按钮出现</button>
+      </div>
+      <div class="hint" id="trigHint">模板截的是<b>开卖前</b>的占位按钮（如"公示中"），开卖瞬间它消失 → 触发。</div>
+    </div>
+
+    <div class="sec">
+      <h3>参数</h3>
+      <div class="row"><label>匹配阈值</label><span id="thVal" style="color:#fff">0.85</span></div>
+      <input type="range" id="th" min="0.5" max="0.99" step="0.01" value="0.85">
+      <div class="row" style="margin-top:9px"><label>点击频率 (Hz)</label><input type="number" id="hz" value="50" min="1" max="500"></div>
+      <div class="row"><label>确认点击次数</label><input type="number" id="cc" value="20" min="1" max="200"></div>
+      <div class="row"><label>等弹窗超时 (s)</label><input type="number" id="ft" value="8" min="1" max="60" step="0.5"></div>
+      <div class="row">
+        <label>左上角急停</label>
+        <div class="seg" style="width:88px" id="fsSeg">
+          <button data-fs="1" class="on">开</button><button data-fs="0">关</button>
+        </div>
+      </div>
+      <div class="row"><label>当前相关度</label>
+        <span id="probeBuy" style="font-variant-numeric:tabular-nums">--</span><span style="color:var(--dim)">/</span>
+        <span id="probeConfirm" style="font-variant-numeric:tabular-nums">--</span>
+      </div>
+      <div class="meter"><i id="probeBar" style="width:0"></i></div>
+    </div>
+  </div>
+
+  <!-- ============ 队列 ============ -->
+  <div class="pane" id="pane-queue">
+    <div class="sec">
+      <h3>添加任务</h3>
+      <div class="row"><input type="text" id="tName" placeholder="商品名，如 M4A1 砖皮"></div>
+      <div class="row"><input type="text" id="tKw" placeholder="别名/关键词，逗号分隔（可选）"></div>
+      <div class="row" style="align-items:flex-start;gap:6px">
+        <label style="flex:0 0 auto;padding-top:6px">开卖时间</label>
+        <input type="datetime-local" id="tAt" step="1">
+      </div>
+      <div class="hint" style="margin-top:0">留空 = 手动触发：点「实战开抢整队」后立刻按队列顺序抢。填了时间，到点前 20 秒自动布防。</div>
+      <div class="row" style="margin-top:9px">
+        <button class="wide primary" id="btnAdd">加入队列</button>
+      </div>
+      <div class="row">
+        <button class="tiny" id="btnFillNow">用游戏里读到的名字</button>
+        <button class="tiny" id="btnFillRead">用当前时间+1分</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>批量添加</h3>
+      <div class="row">
+        <textarea id="tBatch" rows="4" placeholder="一行一个商品名，例如：&#10;M4A1 突击步枪 砖皮&#10;AK12 砖皮&#10;QBZ95 砖皮"></textarea>
+      </div>
+      <div class="row" style="align-items:flex-start;gap:6px">
+        <label style="flex:0 0 auto;padding-top:6px">首条开卖</label>
+        <input type="datetime-local" id="bAt" step="1">
+      </div>
+      <div class="row"><label>相邻间隔 (秒)</label><input type="number" id="bGap" value="60" min="0" max="86400"></div>
+      <div class="hint" style="margin-top:0">共用一个开卖时间就填 0 间隔。模板会从第一条复制给其余各条。</div>
+      <div class="row" style="margin-top:9px">
+        <button class="wide" id="btnBatch">批量加入队列</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>队列 <span id="qCount" style="color:var(--dim);font-weight:400"></span></h3>
+      <div id="taskList"><div class="hint">队列是空的</div></div>
+      <div class="row" style="margin-top:9px">
+        <button class="tiny" id="btnClearDone">清掉已完成</button>
+        <button class="tiny" id="btnResetAll">全部重置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 砖皮 ============ -->
+  <div class="pane" id="pane-brick">
+    <div class="sec">
+      <h3>识别 <span id="brickCur" style="color:var(--dim);font-weight:400"></span></h3>
+      <div class="row">
+        <input type="text" id="brickQ" placeholder="粘贴或输入，如 M7 棱镜攻势 极品S">
+      </div>
+      <div class="row" style="margin-top:7px">
+        <button class="tiny" id="btnBrickRead">读游戏里那一行</button>
+        <button class="tiny" id="btnBrickUse">当成商品名加到队列</button>
+      </div>
+      <div class="id-res" id="brickOut">（还没查过）</div>
+    </div>
+
+    <div class="sec">
+      <h3>稀有度分层</h3>
+      <div class="sub" style="font-size:11px;color:var(--dim);line-height:1.6" id="tierBox"></div>
+      <div class="tierline" id="tierChips"></div>
+    </div>
+
+    <div class="sec">
+      <h3>赛季与砖皮</h3>
+      <div id="brickList"><div class="hint">加载中…</div></div>
+    </div>
+  </div>
+
+  <!-- ============ 运行 ============ -->
+  <div class="pane" id="pane-run">
+    <div class="sec">
+      <h3>执行</h3>
+      <div class="row"><button class="wide primary" id="btnDry">演练整队（不点击）</button></div>
+      <div class="row"><button class="wide danger" id="btnLive">实战开抢整队</button></div>
+      <div class="row"><button class="wide" id="btnStop" disabled>停止</button></div>
+      <div class="hint">演练会把整个队列走一遍，只识别不点击。第一次务必先演练。</div>
+    </div>
+
+    <div class="sec">
+      <h3>校时</h3>
+      <div class="kv"><span>本机偏差</span><span id="clkOff">--</span></div>
+      <div class="kv"><span>网络延迟</span><span id="clkDelay">--</span></div>
+      <div class="kv"><span>服务器</span><span id="clkSrv">--</span></div>
+      <div class="kv"><span>校时后时间</span><span id="clkNow">--</span></div>
+      <div class="row" style="margin-top:8px"><button class="wide" id="btnSync">重新校时</button></div>
+      <div class="hint">抢购按校时后的时钟算。本机偏差几百毫秒的话，到点判断会整体偏。</div>
+    </div>
+
+    <div class="sec">
+      <h3>测速</h3>
+      <div id="latList"><div class="hint">还没测过</div></div>
+      <div class="row" style="margin-top:8px"><button class="wide" id="btnLat">测一次</button></div>
+      <div class="hint">TCP 握手往返时间，取最小值。这是客户端能测到的、最接近"点击到服务器"的延迟。</div>
+    </div>
+
+    <div class="sec">
+      <h3>状态</h3>
+      <div class="kv"><span>状态机</span><span id="stState">idle</span></div>
+      <div class="kv"><span>检测频率</span><span id="stHz">0 Hz</span></div>
+      <div class="kv"><span>相关度</span><span id="stScore">0.000</span></div>
+      <div class="kv"><span>点击次数</span><span id="stClicks">0</span></div>
+      <div class="kv"><span>已运行</span><span id="stElapsed">0s</span></div>
+    </div>
+
+    <div class="sec">
+      <h3>日志</h3>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (path, body) => fetch(path, body === undefined ? {} : {
+  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+}).then(r => r.json()).catch(e => ({ok: false, msg: String(e)}));
+
+let cfg = null, pick = 'buy', trig = 'vanish', failsafe = true;
+let dragging = false, startPt = null;
+let lastRead = null;
+
+const stream = $('#stream'), overlay = $('#overlay'), wrap = $('#wrap'), rubber = $('#rubber');
+
+/* ---------------- toast ---------------- */
+let toastTimer = null;
+function toast(msg, kind) {
+  let el = document.getElementById('toast');
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg;
+  el.className = 'show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3800);
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+
+/* ---------------- 标签页 ---------------- */
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  [...e.currentTarget.children].forEach(c => c.classList.toggle('on', c === b));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + b.dataset.tab));
+  if (b.dataset.tab === 'setup') setTimeout(syncOverlay, 30);
+});
+
+/* ---------------- 预览对齐 ---------------- */
+function syncOverlay() {
+  const r = stream.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+  overlay.width = r.width; overlay.height = r.height;
+  overlay.style.left = (r.left - w.left) + 'px';
+  overlay.style.top = (r.top - w.top) + 'px';
+  overlay.style.width = r.width + 'px';
+  overlay.style.height = r.height + 'px';
+  drawBoxes();
+}
+stream.addEventListener('load', syncOverlay);
+window.addEventListener('resize', syncOverlay);
+
+const LABELS = {buy: '购买', confirm: '确认', name: '商品名', price: '价格', clock: '倒计时'};
+
+function drawBoxes() {
+  wrap.querySelectorAll('.box').forEach(e => e.remove());
+  if (!cfg) return;
+  const r = stream.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+  for (const name of ['buy', 'confirm', 'name', 'price', 'clock']) {
+    const b = cfg.regions[name];
+    if (!b) continue;
+    const d = document.createElement('div');
+    d.className = 'box ' + name;
+    d.style.left = (r.left - w.left + b.x * r.width) + 'px';
+    d.style.top = (r.top - w.top + b.y * r.height) + 'px';
+    d.style.width = (b.w * r.width) + 'px';
+    d.style.height = (b.h * r.height) + 'px';
+    d.innerHTML = `<div class="tag">${LABELS[name]}</div>`;
+    wrap.appendChild(d);
+  }
+}
+
+/* ---------------- 拖拽框选 ---------------- */
+function pos(e) {
+  const r = stream.getBoundingClientRect();
+  return {
+    x: Math.min(Math.max(e.clientX - r.left, 0), r.width),
+    y: Math.min(Math.max(e.clientY - r.top, 0), r.height),
+    w: r.width, h: r.height
+  };
+}
+overlay.addEventListener('mousedown', e => {
+  dragging = true; startPt = pos(e);
+  const r = stream.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+  rubber.style.display = 'block';
+  rubber.style.left = (startPt.x + r.left - w.left) + 'px';
+  rubber.style.top = (startPt.y + r.top - w.top) + 'px';
+  rubber.style.width = '0px'; rubber.style.height = '0px';
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const p = pos(e);
+  const x = Math.min(p.x, startPt.x), y = Math.min(p.y, startPt.y);
+  const w = Math.abs(p.x - startPt.x), h = Math.abs(p.y - startPt.y);
+  const r = stream.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+  rubber.style.left = (x + r.left - wr.left) + 'px';
+  rubber.style.top = (y + r.top - wr.top) + 'px';
+  rubber.style.width = w + 'px'; rubber.style.height = h + 'px';
+});
+window.addEventListener('mouseup', async e => {
+  if (!dragging) return;
+  dragging = false;
+  rubber.style.display = 'none';
+  const p = pos(e);
+  const x = Math.min(p.x, startPt.x), y = Math.min(p.y, startPt.y);
+  const w = Math.abs(p.x - startPt.x), h = Math.abs(p.y - startPt.y);
+  if (w < 6 || h < 6 || !p.w) return;
+  const box = { x: x / p.w, y: y / p.h, w: w / p.w, h: h / p.h };
+  const res = await api('/api/region', {name: pick, box});
+  if (res.ok) { cfg = res.config; drawBoxes(); toast(`已保存${LABELS[pick]}区域`, 'ok'); }
+  else toast(res.msg || '保存失败', 'err');
+});
+
+/* ---------------- 控件 ---------------- */
+$('#pickSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  pick = b.dataset.pick;
+  [...e.currentTarget.children].forEach(c => c.classList.toggle('on', c === b));
+  const tips = {
+    buy: '拖出<b>购买按钮</b>的范围。框比按钮稍大一圈即可。',
+    confirm: '拖出<b>确认弹窗里那个确认按钮</b>的范围。',
+    name: '拖出<b>商品名称</b>那一行文字。用来读游戏里现在是什么商品。',
+    price: '拖出<b>价格</b>文字（可选）。',
+  };
+  $('#pickHint').innerHTML = tips[pick] || '';
+  $('#btnShot').disabled = (pick !== 'buy' && pick !== 'confirm');
+});
+
+$('#trigSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  trig = b.dataset.trig;
+  [...e.currentTarget.children].forEach(c => c.classList.toggle('on', c === b));
+  $('#trigHint').innerHTML = trig === 'vanish'
+    ? '模板截的是<b>开卖前</b>的占位按钮（如"公示中"），开卖瞬间它消失 → 触发。'
+    : '模板截的是<b>可购买状态</b>（如"¥价格"），它一出现 → 触发。需要在开卖后截模板。';
+  api('/api/config', {trigger_mode: trig});
+});
+
+$('#fsSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  failsafe = b.dataset.fs === '1';
+  [...e.currentTarget.children].forEach(c => c.classList.toggle('on', c === b));
+  api('/api/config', {failsafe});
+});
+
+$('#th').addEventListener('input', e => {
+  $('#thVal').textContent = (+e.target.value).toFixed(2);
+  api('/api/config', {threshold: +e.target.value});
+});
+$('#hz').addEventListener('change', e => api('/api/config', {click_hz: +e.target.value}));
+$('#cc').addEventListener('change', e => api('/api/config', {confirm_clicks: +e.target.value}));
+$('#ft').addEventListener('change', e => api('/api/config', {fire_timeout_s: +e.target.value}));
+
+$('#btnShot').addEventListener('click', async () => {
+  const res = await api('/api/template', {name: pick});
+  if (res.ok) { cfg = res.config; refreshThumbs(); toast(`模板已保存 ${res.size[0]}×${res.size[1]}`, 'ok'); }
+  else toast(res.msg || '截图失败', 'err');
+});
+
+/* ---------------- 读取 ---------------- */
+$('#btnRead').addEventListener('click', async () => {
+  $('#ocrOut').textContent = '识别中…';
+  const r = await api('/api/read', {});
+  if (!r.ok) { $('#ocrOut').textContent = r.error || '读取失败'; $('#ocrMatch').textContent = '--'; return; }
+  lastRead = r;
+  $('#ocrOut').textContent = r.text || '（没识别到文字）';
+  $('#ocrMatch').textContent = r.name ? `${r.name}（${r.score}）` : '队列里没有匹配的名字';
+  if (r.price !== null && r.price !== undefined) $('#ocrOut').textContent += `\n价格 ${r.price}`;
+  if (r.brick && r.brick.ok) {
+    $('#ocrMatch').textContent += ` · ${brickLine(r.brick)}`;
+  }
+  showBrick(r.brick);
+});
+
+$('#btnFillNow').addEventListener('click', () => {
+  if (!lastRead || !lastRead.name) { toast('先点上面读一次，或者手动填', 'err'); return; }
+  $('#tName').value = lastRead.name;
+});
+$('#btnFillRead').addEventListener('click', () => {
+  const d = new Date(Date.now() + 60000);
+  const p = n => String(n).padStart(2, '0');
+  $('#tAt').value = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+});
+
+/* ---------------- 队列 ---------------- */
+$('#btnAdd').addEventListener('click', async () => {
+  const name = $('#tName').value.trim();
+  if (!name) { toast('先填商品名', 'err'); return; }
+  const kw = $('#tKw').value.split(/[,，\s]+/).filter(Boolean);
+  const at = $('#tAt').value ? new Date($('#tAt').value).getTime() / 1000 : 0;
+  const r = await api('/api/tasks/add', {name, keywords: kw, fire_at: at});
+  if (!r.ok) { toast(r.msg, 'err'); return; }
+  $('#tName').value = ''; $('#tKw').value = '';
+  renderTasks(r.tasks);
+  toast('已加入队列', 'ok');
+});
+
+$('#btnClearDone').addEventListener('click', async () => {
+  const r = await api('/api/tasks/clear', {});
+  renderTasks(r.tasks); toast('已清理', 'ok');
+});
+
+$('#btnBatch').addEventListener('click', async () => {
+  const names = $('#tBatch').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!names.length) { toast('一行一个商品名，先填几个', 'err'); return; }
+  const at = $('#bAt').value ? new Date($('#bAt').value).getTime() / 1000 : 0;
+  const gap = +$('#bGap').value || 0;
+  const r = await api('/api/tasks/add_many', {names, fire_at: at, interval_s: gap});
+  if (!r.ok) { toast(r.msg || '批量添加失败', 'err'); return; }
+  $('#tBatch').value = '';
+  renderTasks(r.tasks);
+  toast(r.msg + (r.errors?.length ? `，${r.errors.length} 条失败` : ''), 'ok');
+});
+$('#btnResetAll').addEventListener('click', async () => {
+  const r = await api('/api/tasks/reset', {});
+  renderTasks(r.tasks); toast('已重置', 'ok');
+});
+
+const ST_CN = {pending:'待命', armed:'已布防', running:'执行中', done:'完成', failed:'失败', skipped:'跳过'};
+
+function renderTasks(tasks) {
+  const box = $('#taskList');
+  $('#qCount').textContent = tasks.length ? `(${tasks.length})` : '';
+  if (!tasks.length) { box.innerHTML = '<div class="hint">队列是空的</div>'; return; }
+  const now = Date.now() / 1000;
+  box.innerHTML = tasks.map(t => {
+    let at = '手动（立刻抢）';
+    if (t.fire_at) {
+      at = new Date(t.fire_at * 1000).toLocaleString('zh-CN', {hour12:false});
+      const left = t.fire_at - now;
+      if (t.status === 'pending' || t.status === 'armed') {
+        at += left > 0 ? `（${fmtLeft(left)}后）` : '（已到点）';
+      }
+    }
+    const kw = (t.keywords || []).length ? ` · 别名 ${t.keywords.join('/')}` : '';
+    const res = t.result ? `<div class="res">${escapeHtml(t.result)}</div>` : '';
+    return `<div class="task">
+      <div class="top">
+        <span class="nm">${escapeHtml(t.name)}</span>
+        <span class="st ${t.status}">${ST_CN[t.status] || t.status}</span>
+        <button class="tiny" data-del="${t.id}">删</button>
+      </div>
+      <div class="meta"><span>${at}</span><span>${kw}</span></div>
+      <div class="row" style="margin:5px 0 0">
+        <button class="tiny" data-cap="${t.id}">用当前画面重截模板</button>
+      </div>
+      ${res}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+    const r = await api('/api/tasks/remove', {id: b.dataset.del});
+    renderTasks(r.tasks);
+  }));
+  box.querySelectorAll('[data-cap]').forEach(b => b.addEventListener('click', async () => {
+    const r = await api('/api/tasks/capture', {id: b.dataset.cap});
+    if (!r.ok) { toast(r.msg || '截模板失败', 'err'); return; }
+    renderTasks(r.tasks);
+    toast(`已重截 ${r.sizes.buy.join('×')} / ${r.sizes.confirm.join('×')}`, 'ok');
+  }));
+}
+
+function fmtLeft(s) {
+  if (s < 60) return `${Math.ceil(s)} 秒`;
+  if (s < 3600) return `${Math.floor(s / 60)} 分 ${Math.ceil(s % 60)} 秒`;
+  return `${Math.floor(s / 3600)} 小时 ${Math.floor((s % 3600) / 60)} 分`;
+}
+
+/* ---------------- 砖皮知识库 ---------------- */
+let brickData = null, lastBrick = null;
+
+function brickLine(r) {
+  if (!r || !r.ok) return '对不上赛季砖皮';
+  const o = r.options[0];
+  let s = `${o.season} ${o.season_name} · ${o.weapon} - ${o.skin} · ${o.current ? '当期' : '往期'}`;
+  if (r.grade && r.grade.craft) s += ` · ${r.grade.craft}${r.grade.wear || ''}`;
+  else if (r.grade && r.grade.wear) s += ` · ${r.grade.wear} 成色`;
+  if (r.weak) s += '（只认出枪型号，砖皮名没对上）';
+  if (r.ambiguous) s += `（还有 ${r.options.length - 1} 个同分候选）`;
+  return s;
+}
+
+function showBrick(r) {
+  const box = $('#brickOut');
+  if (!r) { box.textContent = '（还没查过）'; return; }
+  if (!r.ok) { box.innerHTML = `<span class="no">${escapeHtml(r.reason || '对不上')}</span>`; return; }
+  lastBrick = r;
+  const g = r.grade || {};
+  box.innerHTML = r.options.map((o, i) => {
+    const badge = o.current ? '<span class="ok">当期</span>' : '往期';
+    const weak = o.weak ? ' <span style="color:var(--warn)">弱匹配</span>' : '';
+    const sub = o.series_of ? `（${escapeHtml(o.series_of)} 副系列）` : '';
+    const craft = i === 0 && g.craft ? ` · ${g.craft}${g.wear || ''}` : (i === 0 && g.wear ? ` · ${g.wear} 成色` : '');
+    return `<div style="margin-bottom:${i === r.options.length - 1 ? 0 : 7}px">
+      <b>${escapeHtml(o.season)} ${escapeHtml(o.season_name)}</b> · ${badge}${weak} · 置信 ${o.confidence}
+      <div style="color:#a5d6ff">${escapeHtml(o.weapon)} - ${escapeHtml(o.skin)}${sub}${craft}</div>
+      <div style="color:var(--dim);font-size:11px">${escapeHtml(o.date)}${o.note ? ' · ' + escapeHtml(o.note) : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderBrickList() {
+  if (!brickData) return;
+  const cur = brickData.current;
+  $('#brickCur').textContent = cur ? `当期 ${cur} ${brickData.current_name || ''}` : '';
+  $('#brickList').innerHTML = brickData.seasons.map(s => {
+    const on = s.season === cur;
+    const skins = s.skins.map(sk => {
+      const ws = sk.weapons.map(w => `${w.name}`).join(' / ');
+      const ser = (sk.series || []).length
+        ? `<div class="sub">副系列：${sk.series.map(x => `${x.name}（${x.weapons.join('、')}）`).join('，')}</div>`
+        : '';
+      return `<div class="line"><b>${escapeHtml(ws)}</b> - ${escapeHtml(sk.skin)}</div>${ser}`;
+    }).join('');
+    return `<div class="sk">
+      <div class="hd">
+        <span class="ss ${on ? 'cur' : ''}">${escapeHtml(s.season)}</span>
+        <span class="sn">${escapeHtml(s.name)}</span>
+        <span class="dt">${escapeHtml(s.date || '')}</span>
+      </div>
+      ${skins}
+    </div>`;
+  }).join('');
+  const t = brickData;
+  $('#tierBox').innerHTML =
+    `品阶（颜色）：${t.tiers.map(x => `${x.name}${x.color ? '(' + x.color + ')' : ''}`).join(' < ')}` +
+    `<br>做工：极品（完整特效）> 优品（简化）` +
+    `<br>成色：${t.wear.map(w => `${w.grade}${w.name ? w.name : ''} ${w.max === null ? '> ' + t.wear[t.wear.length - 2].max : '≤ ' + w.max}`).join(' · ')}`;
+  $('#tierChips').innerHTML = t.tiers.map(x =>
+    `<span>${escapeHtml(x.name)}${x.color ? ' ' + escapeHtml(x.color) : ''}</span>`).join('');
+}
+
+async function brickIdentify(text) {
+  const r = await api('/api/bricks/identify', {text});
+  showBrick(r.ok ? r : {ok: false, reason: r.reason || r.msg || '对不上'});
+  return r;
+}
+
+$('#brickQ').addEventListener('input', e => {
+  const v = e.target.value.trim();
+  if (!v) { showBrick(null); return; }
+  clearTimeout(brickIdentify._t);
+  brickIdentify._t = setTimeout(() => brickIdentify(v), 260);
+});
+
+$('#btnBrickRead').addEventListener('click', async () => {
+  $('#brickOut').textContent = '识别中…';
+  const r = await api('/api/read', {});
+  if (!r.ok) { showBrick({ok: false, reason: r.error || '读取失败'}); return; }
+  $('#brickQ').value = r.text || '';
+  showBrick(r.brick);
+  if (r.brick && r.brick.ok) toast(brickLine(r.brick), 'ok');
+});
+
+$('#btnBrickUse').addEventListener('click', async () => {
+  if (!lastBrick || !lastBrick.ok) { toast('先识别出一件砖皮', 'err'); return; }
+  const o = lastBrick.options[0];
+  const name = `${o.weapon} - ${o.skin}`;
+  const r = await api('/api/tasks/add', {
+    name,
+    keywords: [o.skin, o.weapon.split(' ')[0], o.season_name],
+    note: `${o.season} ${o.season_name}`,
+  });
+  if (!r.ok) { toast(r.msg || '加不进队列', 'err'); return; }
+  renderTasks(r.tasks);
+  toast(`已加进队列：${name}`, 'ok');
+});
+
+/* ---------------- 校时 / 测速 ---------------- */
+$('#btnSync').addEventListener('click', async () => {
+  $('#clkOff').textContent = '校时中…';
+  const r = await api('/api/timesync', {});
+  if (!r.ok) { toast(r.error || '校时失败', 'err'); $('#clkOff').textContent = '失败'; return; }
+  showClock(r);
+  toast(`校时完成，偏差 ${(r.offset*1000).toFixed(0)} ms`, 'ok');
+});
+
+function showClock(c) {
+  if (!c || c.at === null || c.at === undefined) { $('#clkOff').textContent = '--'; return; }
+  const off = c.offset * 1000;
+  $('#clkOff').textContent = `${off >= 0 ? '+' : ''}${off.toFixed(0)} ms`;
+  $('#clkOff').style.color = Math.abs(off) > 200 ? 'var(--warn)' : '#fff';
+  $('#clkDelay').textContent = c.delay === null ? '--' : `${(c.delay*1000).toFixed(1)} ms`;
+  $('#clkSrv').textContent = c.server || '--';
+  const pill = $('#clockPill');
+  pill.textContent = `时钟 ${off >= 0 ? '+' : ''}${off.toFixed(0)}ms`;
+  pill.className = 'pill' + (Math.abs(off) > 200 ? ' warn' : '');
+}
+
+$('#btnLat').addEventListener('click', async () => {
+  $('#latList').innerHTML = '<div class="hint">测试中…</div>';
+  const r = await api('/api/latency', {});
+  if (!r.results || !r.results.length) { $('#latList').innerHTML = '<div class="hint">测速失败</div>'; return; }
+  const max = Math.max(...r.results.map(x => x.min || 0), 1);
+  $('#latList').innerHTML = r.results.map(x => {
+    if (!x.ok) return `<div class="lat-row"><span>${escapeHtml(x.label)}</span><span style="color:var(--err)">不通</span></div>`;
+    return `<div class="lat-row"><span>${escapeHtml(x.label)}</span>
+      <span style="font-variant-numeric:tabular-nums">${x.min} ms</span></div>
+      <div class="bar" style="width:${Math.max(4, x.min/max*100)}%"></div>`;
+  }).join('');
+  const best = r.best;
+  const pill = $('#netPill');
+  if (best) { pill.textContent = `网络 ${best.min}ms`; pill.className = 'pill' + (best.min > 80 ? ' warn' : ''); }
+});
+
+/* ---------------- 运行 ---------------- */
+$('#btnDry').addEventListener('click', () => runSched(true));
+
+let liveArmed = false, liveTimer = null;
+$('#btnLive').addEventListener('click', () => {
+  const btn = $('#btnLive');
+  if (!liveArmed) {
+    liveArmed = true; btn.textContent = '再点一次确认开抢'; btn.classList.add('armed');
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => {
+      liveArmed = false; btn.textContent = '实战开抢整队'; btn.classList.remove('armed');
+    }, 5000);
+    return;
+  }
+  liveArmed = false; clearTimeout(liveTimer);
+  btn.textContent = '实战开抢整队'; btn.classList.remove('armed');
+  runSched(false);
+});
+
+async function runSched(dry) {
+  const r = await api('/api/scheduler/start', {dry_run: dry});
+  if (!r.ok) { toast(r.msg, 'err'); return; }
+  toast(dry ? '演练已启动' : '实战已启动', 'ok');
+}
+$('#btnStop').addEventListener('click', () => api('/api/scheduler/stop', {}));
+
+/* ---------------- 状态轮询 ---------------- */
+const ENGINE_CN = {idle:'空闲', watch:'监视中', fire:'点击购买', confirm:'确认中', done:'完成', abort:'已中止'};
+
+let lastLogKey = '';
+function renderLog(items) {
+  const box = $('#log');
+  const key = items.length + '|' + (items.length ? items[items.length-1].msg : '');
+  if (key === lastLogKey) return;
+  lastLogKey = key;
+  box.innerHTML = items.map(m =>
+    `<div class="${m.level}"><span class="t">${m.t}</span>  ${escapeHtml(m.msg)}</div>`
+  ).join('');
+  box.scrollTop = 1e9;
+}
+
+async function poll() {
+  try {
+    const st = await api('/api/scheduler');
+    const eng = st.engine || {};
+    const tasks = st.tasks || [];
+
+    $('#stState').textContent = ENGINE_CN[eng.state] || eng.state || 'idle';
+    $('#stHz').textContent = (eng.stats?.hz || 0) + ' Hz';
+    $('#stScore').textContent = (eng.stats?.score || 0).toFixed(3);
+    $('#stClicks').textContent = eng.stats?.clicks || 0;
+    $('#stElapsed').textContent = (eng.stats?.elapsed || 0) + 's';
+
+    const pill = $('#statePill');
+    pill.textContent = st.running ? (ENGINE_CN[eng.state] || '运行中') : (ENGINE_CN[eng.state] || '空闲');
+    pill.className = 'pill' + (eng.state === 'done' ? ' live' : eng.state === 'abort' ? ' err' : st.running ? ' live' : '');
+
+    $('#modePill').textContent = eng.dry_run ? '演练' : '实战';
+    $('#modePill').className = 'pill' + (eng.dry_run ? '' : ' live');
+
+    $('#btnStop').disabled = !st.running;
+    $('#btnDry').disabled = st.running;
+    $('#btnLive').disabled = st.running;
+
+    renderTasks(tasks);
+    renderLog(st.log || []);
+    showClock(st.clock);
+  } catch (e) { /* 服务重启中，忽略这一轮 */ }
+  setTimeout(poll, 700);
+}
+
+async function pollProbe() {
+  try {
+    const p = await api('/api/probe');
+    const f = v => v === null || v === undefined ? '--' : v.toFixed(3);
+    $('#probeBuy').textContent = f(p.buy);
+    $('#probeConfirm').textContent = f(p.confirm);
+    const best = Math.max(p.buy ?? 0, p.confirm ?? 0);
+    const bar = $('#probeBar');
+    bar.style.width = Math.min(100, best * 100) + '%';
+    bar.className = best >= (+$('#th').value) ? 'pass' : '';
+  } catch (e) {}
+  setTimeout(pollProbe, 1500);
+}
+
+function refreshThumbs() {
+  for (const name of ['buy', 'confirm']) {
+    const img = $('#thumb-' + name);
+    if (!img) continue;
+    img.classList.toggle('missing', !cfg?.templates_ready?.[name]);
+    img.src = '/api/template/' + name + '?t=' + Date.now();
+  }
+}
+
+/* ---------------- 初始化 ---------------- */
+(async function init() {
+  cfg = await api('/api/config');
+  const sc = await api('/api/screen');
+  if (sc.size) $('#screenPill').textContent = sc.size.join('×');
+
+  $('#th').value = cfg.threshold; $('#thVal').textContent = (+cfg.threshold).toFixed(2);
+  $('#hz').value = cfg.click_hz;
+  $('#cc').value = cfg.confirm_clicks;
+  $('#ft').value = cfg.fire_timeout_s;
+
+  trig = cfg.trigger_mode;
+  [...$('#trigSeg').children].forEach(c => c.classList.toggle('on', c.dataset.trig === trig));
+  failsafe = cfg.failsafe;
+  [...$('#fsSeg').children].forEach(c => c.classList.toggle('on', (c.dataset.fs === '1') === failsafe));
+
+  $('#stream').src = '/api/stream?' + Date.now();
+  syncOverlay();
+  refreshThumbs();
+
+  const tasks = await api('/api/tasks');
+  renderTasks(tasks.tasks || []);
+
+  brickData = await api('/api/bricks');
+  renderBrickList();
+
+  // 启动时自动校时一次
+  api('/api/timesync', {}).then(r => { if (r.ok) showClock(r); }).catch(() => {});
+
+  poll();
+  pollProbe();
+})();
+</script>
+</body>
+</html>
