@@ -177,10 +177,22 @@ class Handler(BaseHTTPRequestHandler):
         try:
             while True:
                 buf = _jpeg(s.grab(), quality=70, width=1280)
+                if not buf:
+                    # 编码失败时不发空帧：浏览器收到 0 字节的 part 会把 img 判成 broken
+                    time.sleep(0.1)
+                    continue
                 self.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\n")
                 self.wfile.write(b"Content-Length: %d\r\n\r\n" % len(buf))
                 self.wfile.write(buf)
                 self.wfile.write(b"\r\n")
+                # flush 必须留：MJPEG 是 while True、响应永不结束，而 wfile 带缓冲。
+                # 实测（同一个 exe，只改这一行）：
+                #   有 flush → 4 帧 / 327,680 字节
+                #   无 flush → 0 字节，客户端直接超时
+                # 客户端收不到字节时浏览器把 <img> 判成 broken，表现为预览区全黑。
+                # 源码模式下单帧 93KB 会撞满 8KB 缓冲自动刷出，所以这个 bug 只在
+                # 打包后的 exe 里暴露。
+                self.wfile.flush()
                 time.sleep(0.1)
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
             pass

@@ -5,23 +5,127 @@
 <title>SJZ 抢购控制台</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* 色值来自 GitHub Primer dark（官方 @primer/primitives 11.10.0）
+     和 Woodpecker CI 的日志配色。每一项都注明来源 token。 */
   :root {
-    --bg: #0d1117; --panel: #161b22; --line: #263041; --txt: #c9d1d9;
-    --dim: #7d8797; --accent: #2f81f7; --ok: #3fb950; --warn: #d29922; --err: #f85149;
+    /* —— 背景层级（Primer dark）—— */
+    --bg:        #0d1117;   /* bgColor-default */
+    --bg-inset:  #010409;   /* bgColor-inset：比底色更深，用于预览/日志底 */
+    --panel:     #151b23;   /* card-bgColor → bgColor-muted（比底色亮一档） */
+    --elevated:  #1c232c;   /* 自定：面板内再高一层（输入框、卡片头部） */
+    --hover:     #21262d;   /* control-bgColor-rest */
+
+    /* —— 边框（Primer dark）—— */
+    --line:      #3d444d;   /* borderColor-default */
+    --line-soft: #3d444db3; /* borderColor-muted，带透明度 */
+    --line-strong: #656c76; /* borderColor-emphasis */
+
+    /* —— 文字（Primer dark）—— */
+    --txt:       #f0f6fc;   /* fgColor-default */
+    --txt-2:     #9198a1;   /* fgColor-muted */
+    --txt-3:     #656c76;   /* fgColor-disabled */
+
+    /* —— 语义色（Primer dark）—— */
+    --accent:    #1f6feb;   /* bgColor-accent-emphasis */
+    --accent-hi: #2a7aef;   /* control-checked-bgColor-hover */
+    --link:      #4493f8;   /* fgColor-accent */
+    --ok:        #3fb950;   /* fgColor-success */
+    --warn:      #d29922;   /* fgColor-attention */
+    --err:       #f85149;   /* fgColor-danger */
+
+    /* —— 日志（Woodpecker console.css）—— */
+    --log-head:  #242526;
+    --log-body:  #121314;
+    --ansi-red:  #ff7070;
+    --ansi-green:#b0f986;
+    --ansi-yellow:#c6c502;
+    --ansi-blue: #8db7e0;
+
+    /* —— 尺寸刻度 —— */
+    --r-sm: 6px; --r-md: 8px; --r-lg: 10px;
+    --h-ctl: 30px;          /* 控件标准高度 */
+    --top-h: 48px;          /* 顶栏 */
+    --nav-w: 212px;         /* 左导航 */
+    --side-w: 304px;        /* 右状态栏 */
   }
+
+  /* 兼容旧变量名，JS 里内联用了 --dim / --line / --warn / --err */
+  :root { --dim: var(--txt-2); }
+
+  html, body { height: 100%; }
   body {
     background: var(--bg); color: var(--txt);
     font: 13px/1.55 "Segoe UI", "Microsoft YaHei", sans-serif;
-    display: grid; grid-template-columns: 1fr 380px; height: 100vh; overflow: hidden;
+    overflow: hidden;
+    display: flex; flex-direction: column;
   }
 
-  .stage { display: flex; flex-direction: column; min-width: 0; }
-  .bar {
-    display: flex; align-items: center; gap: 8px; padding: 9px 14px;
-    background: var(--panel); border-bottom: 1px solid var(--line); flex-shrink: 0;
+  /* ================= 顶栏 ================= */
+  .topbar {
+    height: var(--top-h); flex-shrink: 0;
+    display: flex; align-items: center; gap: 10px; padding: 0 14px;
+    background: var(--panel); border-bottom: 1px solid var(--line);
   }
-  .bar .title { font-weight: 600; }
-  .bar .title span { color: var(--accent); }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .brand .logo {
+    width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), #a371f7);
+    display: grid; place-items: center; font-size: 12px; color: #fff;
+  }
+  .brand span { color: var(--txt-2); font-weight: 400; }
+
+  /* 无边框窗口的自绘按钮 */
+  .winbtns { display: flex; gap: 2px; margin-left: 4px; }
+  .winbtns button {
+    width: 30px; height: 26px; padding: 0; font-size: 11px;
+    background: transparent; border: 0; border-radius: var(--r-sm);
+    color: var(--txt-2);
+  }
+  .winbtns button:hover { background: var(--hover); color: var(--txt); }
+  #btnClose:hover { background: #b3261e; color: #fff; }
+  /* 拖拽区容器里，按钮自身不能再是拖拽目标 */
+  .no-drag { -webkit-app-region: no-drag; }
+
+  /* ================= 主体三栏 ================= */
+  .shell {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: var(--nav-w) minmax(0, 1fr) var(--side-w);
+  }
+
+  /* ---- 左：竖排导航 ---- */
+  .nav {
+    background: var(--panel); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; overflow-y: auto; padding: 10px 8px;
+  }
+  .nav .group {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--txt-3); font-weight: 600; padding: 10px 8px 5px;
+  }
+
+  /* ---- 中：主内容 ---- */
+  .main { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .pane { display: none; flex: 1; min-height: 0; overflow-y: auto; }
+  .pane.on { display: block; }
+
+  /* 框选页要撑满，不要让预览被压扁 */
+  #pane-setup.on { display: flex; flex-direction: column; }
+
+  /* ---- 右：状态 + 日志 ---- */
+  .side {
+    background: var(--panel); border-left: 1px solid var(--line);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .side .head {
+    padding: 10px 12px 8px; border-bottom: 1px solid var(--line); flex-shrink: 0;
+  }
+  .side .head h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--txt-3); font-weight: 600;
+  }
+  /* 右栏的 kv 组不要继承主内容区的 max-width */
+  .side .sec { max-width: none; padding: 10px 12px; }
   .spacer { flex: 1; }
   .pill {
     font-size: 11px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
@@ -31,8 +135,10 @@
   .pill.err { color: var(--err); border-color: #6e2320; background: #2a1010; }
   .pill.warn { color: var(--warn); border-color: #6b4a10; background: #2a1f08; }
 
+  /* 框选页的预览区：拖框要精细，但也不能把下面的设置全挤出屏幕 */
   .canvas-wrap {
-    flex: 1; position: relative; overflow: hidden; background: #000;
+    flex: 0 0 auto; height: 240px; position: relative; overflow: hidden;
+    background: var(--bg-inset);
     display: flex; align-items: center; justify-content: center;
   }
   #stream { max-width: 100%; max-height: 100%; display: block; user-select: none; }
@@ -46,7 +152,7 @@
   .box.clock { border-color: #39c5cf; }
   .box .tag {
     position: absolute; top: -19px; left: -2px; font-size: 10px; padding: 1px 6px;
-    color: #fff; white-space: nowrap;
+    color: #fff; white-space: nowrap; border-radius: 3px 3px 0 0;
   }
   .box.buy .tag { background: var(--accent); }
   .box.confirm .tag { background: var(--ok); }
@@ -55,88 +161,118 @@
   .box.clock .tag { background: #39c5cf; color: #00262a; }
   #rubber { position: absolute; border: 1px dashed #fff; background: #2f81f733; display: none; pointer-events: none; }
 
-  .panel { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
-  .tabs { display: flex; border-bottom: 1px solid var(--line); flex-shrink: 0; }
-  .tabs button {
-    flex: 1; border: 0; border-radius: 0; background: transparent; color: var(--dim);
-    padding: 10px 0; font-size: 12px; border-bottom: 2px solid transparent;
+  /* #tabs 现在是左导航的按钮容器：id 不变，JS 的切换逻辑照旧 */
+  #tabs { display: flex; flex-direction: column; gap: 2px; }
+  #tabs button {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    height: auto; padding: 7px 9px; border: 0; border-radius: var(--r-sm);
+    background: transparent; color: var(--txt-2); font-size: 13px;
+    justify-content: flex-start; text-align: left;
   }
-  .tabs button.on { color: #fff; border-bottom-color: var(--accent); background: #1c2530; }
-  .pane { display: none; overflow-y: auto; flex: 1; }
-  .pane.on { display: block; }
+  #tabs button:hover { background: var(--hover); border-color: transparent; color: var(--txt); }
+  #tabs button.on { background: var(--hover); color: var(--txt); font-weight: 600; }
+  #tabs button.on .ic { color: var(--accent); }
+  #tabs .ic { width: 16px; text-align: center; flex-shrink: 0; color: var(--txt-3); font-size: 12px; }
+  #tabs .nr { margin-left: auto; font-size: 11px; color: var(--txt-3); font-variant-numeric: tabular-nums; }
 
-  .sec { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  /* 内容区顶部的页头 */
+  .phead {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px 10px; flex-shrink: 0;
+  }
+  .phead h1 { font-size: 15px; font-weight: 600; }
+  .phead .desc { font-size: 12px; color: var(--txt-2); }
+
+  .sec {
+    padding: 12px 18px; border-bottom: 1px solid var(--line);
+    max-width: 760px; flex-shrink: 0;
+  }
+  .sec:last-child { border-bottom: 0; }
   .sec h3 {
-    font-size: 11px; text-transform: uppercase; letter-spacing: .7px;
-    color: var(--dim); margin-bottom: 9px; font-weight: 600;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--txt-3); margin-bottom: 10px; font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
   }
   .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .row:last-child { margin-bottom: 0; }
-  .row label { flex: 1; color: var(--dim); font-size: 12px; }
+  .row label { flex: 1; color: var(--txt-2); font-size: 12px; }
 
   button {
-    font: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px; cursor: pointer;
-    background: #21262d; color: var(--txt); border: 1px solid var(--line); transition: .12s;
+    font: inherit; font-size: 12px; height: var(--h-ctl); padding: 0 12px;
+    border-radius: var(--r-sm); cursor: pointer;
+    background: var(--hover); color: var(--txt); border: 1px solid var(--line);
+    transition: background .12s, border-color .12s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   }
-  button:hover:not(:disabled) { background: #2d333b; border-color: #3d4657; }
+  button:hover:not(:disabled) { background: #2a313c; border-color: var(--line-strong); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   button:disabled { opacity: .4; cursor: not-allowed; }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.primary:hover:not(:disabled) { background: #1f6feb; }
+  button.primary:hover:not(:disabled) { background: var(--accent-hi); border-color: var(--accent-hi); }
   button.danger { background: #3d1518; border-color: #6e2320; color: #ff7b72; }
   button.danger:hover:not(:disabled) { background: #5a1d21; }
-  button.danger.armed { background: #b3261e; border-color: #f85149; color: #fff; }
+  button.danger.armed { background: #b3261e; border-color: var(--err); color: #fff; }
   button.wide { width: 100%; }
-  button.tiny { padding: 3px 7px; font-size: 11px; }
+  button.tiny { height: 24px; padding: 0 8px; font-size: 11px; }
 
-  .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  .seg button { border: 0; border-radius: 0; flex: 1; padding: 5px 0; font-size: 11.5px; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; flex: 1; height: 28px; padding: 0; font-size: 11.5px; }
+  .seg button + button { border-left: 1px solid var(--line); }
   .seg button.on { background: var(--accent); color: #fff; }
 
   input[type=range] { width: 100%; accent-color: var(--accent); }
   input[type=text], input[type=number], input[type=datetime-local], select {
-    font: inherit; font-size: 12px; padding: 5px 8px; background: #0d1117;
-    color: var(--txt); border: 1px solid var(--line); border-radius: 5px; width: 100%;
+    font: inherit; font-size: 12px; height: var(--h-ctl); padding: 0 9px;
+    background: var(--bg-inset); color: var(--txt);
+    border: 1px solid var(--line); border-radius: var(--r-sm); width: 100%;
   }
-  input[type=number] { width: 70px; text-align: right; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px #1f6feb33;
+  }
+  input[type=number] { width: 78px; text-align: right; }
   input[type=datetime-local] { color-scheme: dark; }
   textarea {
-    font: inherit; font-size: 12px; padding: 6px 8px; background: #0d1117;
-    color: var(--txt); border: 1px solid var(--line); border-radius: 5px;
+    font: inherit; font-size: 12px; padding: 7px 9px; background: var(--bg-inset);
+    color: var(--txt); border: 1px solid var(--line); border-radius: var(--r-sm);
     width: 100%; resize: vertical; color-scheme: dark;
   }
 
-  .kv { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; gap: 8px; }
-  .kv span:last-child { color: #fff; font-variant-numeric: tabular-nums; text-align: right; }
-  .kv span:first-child { color: var(--dim); white-space: nowrap; }
+  .kv { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; gap: 8px; }
+  .kv span:last-child { color: var(--txt); font-variant-numeric: tabular-nums; text-align: right; }
+  .kv span:first-child { color: var(--txt-2); white-space: nowrap; }
 
-  .meter { height: 5px; background: #0d1117; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .meter { height: 5px; background: var(--bg-inset); border-radius: 3px; overflow: hidden; margin-top: 4px; }
   .meter i { display: block; height: 100%; background: var(--accent); transition: width .15s; }
   .meter i.pass { background: var(--ok); }
 
   .tpl-thumb {
-    width: 100%; height: 50px; object-fit: contain; background: #0d1117;
-    border: 1px solid var(--line); border-radius: 5px;
+    width: 100%; height: 50px; object-fit: contain; background: var(--bg-inset);
+    border: 1px solid var(--line); border-radius: var(--r-sm);
   }
   .tpl-thumb.missing { opacity: .22; }
 
+  /* 日志：色值来自 Woodpecker CI console.css，分栏不用空格补齐 */
   #log {
-    font: 11px/1.5 Consolas, monospace; height: 170px; overflow-y: auto;
-    background: #0d1117; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+    flex: 1; min-height: 0; overflow-y: auto;
+    font: 11.5px/1.55 Consolas, "Cascadia Mono", monospace;
+    background: var(--log-body); padding: 8px 10px;
+    color: #b9c0c9;
   }
-  #log div { white-space: pre-wrap; word-break: break-all; }
-  #log .t { color: #4b5563; }
-  #log .info { color: var(--dim); }
-  #log .hit { color: var(--ok); }
-  #log .warn { color: var(--warn); }
-  #log .error { color: var(--err); }
+  #log div { white-space: pre-wrap; word-break: break-word; display: flex; gap: 8px; }
+  #log .t { color: #5a6169; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  #log .m { flex: 1; min-width: 0; }
+  #log .info .m { color: var(--txt-2); }
+  #log .hit .m { color: var(--ansi-green); }
+  #log .warn .m { color: var(--ansi-yellow); }
+  #log .error .m { color: var(--ansi-red); }
 
-  .hint { font-size: 11px; color: var(--dim); line-height: 1.5; margin-top: 7px; }
-  .hint b { color: #9aa4b2; font-weight: 600; }
+  .hint { font-size: 11.5px; color: var(--txt-2); line-height: 1.55; margin-top: 8px; }
+  .hint b { color: var(--txt); font-weight: 600; }
 
   #toast {
     position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 12px);
-    max-width: 560px; padding: 9px 16px; border-radius: 8px; font-size: 12.5px;
-    background: #1f2937; color: #e6edf3; border: 1px solid var(--line);
+    max-width: 560px; padding: 10px 16px; border-radius: var(--r-md); font-size: 12.5px;
+    background: var(--elevated); color: var(--txt); border: 1px solid var(--line);
     box-shadow: 0 8px 28px #0008; opacity: 0; pointer-events: none;
     transition: opacity .18s, transform .18s; z-index: 99; text-align: center;
   }
@@ -146,12 +282,12 @@
 
   /* 任务列表 */
   .task {
-    border: 1px solid var(--line); border-radius: 7px; padding: 8px 9px;
-    margin-bottom: 7px; background: #0f151c;
+    border: 1px solid var(--line); border-radius: var(--r-md); padding: 9px 11px;
+    margin-bottom: 7px; background: var(--bg-inset);
   }
   .task .top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-  .task .nm { font-size: 12.5px; color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .task .meta { font-size: 11px; color: var(--dim); display: flex; gap: 8px; flex-wrap: wrap; }
+  .task .nm { font-size: 12.5px; color: var(--txt); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task .meta { font-size: 11px; color: var(--txt-2); display: flex; gap: 8px; flex-wrap: wrap; }
   .task .res { font-size: 11px; color: var(--warn); margin-top: 3px; }
   .st { font-size: 10px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
   .st.pending { background: #1f2937; color: var(--dim); }
@@ -188,34 +324,46 @@
 </head>
 <body>
 
-<div class="stage">
-  <div class="bar">
-    <div class="title">SJZ <span>抢购控制台</span></div>
-    <div class="pill" id="modePill">演练</div>
-    <div class="spacer"></div>
-    <div class="pill" id="clockPill">时钟 --</div>
-    <div class="pill" id="netPill">网络 --</div>
-    <div class="pill" id="screenPill">--</div>
-    <div class="pill" id="statePill">空闲</div>
-  </div>
-  <div class="canvas-wrap" id="wrap">
-    <img id="stream" alt="屏幕预览">
-    <canvas id="overlay"></canvas>
-    <div id="rubber"></div>
+<div class="topbar pywebview-drag-region">
+  <div class="brand"><span class="logo">抢</span>SJZ <span>抢购控制台</span></div>
+  <div class="pill" id="modePill">演练</div>
+  <div class="spacer"></div>
+  <div class="pill" id="clockPill">时钟 --</div>
+  <div class="pill" id="netPill">网络 --</div>
+  <div class="pill" id="screenPill">--</div>
+  <div class="pill" id="statePill">空闲</div>
+  <!-- 无边框窗口没有系统按钮，自己画一个。no-drag 保证点它们不触发拖窗 -->
+  <div class="winbtns no-drag">
+    <button id="btnMin" title="最小化" aria-label="最小化">─</button>
+    <button id="btnClose" title="关闭" aria-label="关闭">✕</button>
   </div>
 </div>
 
-<div class="panel">
-  <div class="tabs" id="tabs">
-    <button data-tab="setup" class="on">框选</button>
-    <button data-tab="queue">任务队列</button>
-    <button data-tab="brick">砖皮</button>
-    <button data-tab="run">运行</button>
-  </div>
+<div class="shell">
+
+  <!-- ============ 左：导航 ============ -->
+  <nav class="nav">
+    <div class="group">工作台</div>
+    <div id="tabs">
+      <button data-tab="setup" class="on"><span class="ic">◎</span>框选区域</button>
+      <button data-tab="queue"><span class="ic">☰</span>任务队列 <span class="nr" id="navQCount"></span></button>
+      <button data-tab="brick"><span class="ic">◈</span>砖皮知识库</button>
+      <button data-tab="run"><span class="ic">▶</span>运行与校时</button>
+    </div>
+  </nav>
+
+  <!-- ============ 中：主内容 ============ -->
+  <main class="main">
 
   <!-- ============ 框选 ============ -->
   <div class="pane on" id="pane-setup">
-    <div class="sec">
+    <div class="phead"><h1>框选区域</h1><span class="desc">在下面画面上拖框，框住要盯的按钮或文字</span></div>
+    <div class="canvas-wrap" id="wrap">
+      <img id="stream" alt="屏幕预览">
+      <canvas id="overlay"></canvas>
+      <div id="rubber"></div>
+    </div>
+    <div class="sec" style="max-width:none">
       <h3>区域</h3>
       <div class="seg" id="pickSeg">
         <button data-pick="buy" class="on">购买</button>
@@ -239,7 +387,7 @@
       </div>
     </div>
 
-    <div class="sec">
+    <div class="sec" style="max-width:none">
       <h3>读取游戏内文字</h3>
       <div class="row">
         <button class="wide" id="btnRead">读一次商品名 / 价格</button>
@@ -249,7 +397,7 @@
       <div class="hint">框选「商品名」和「价格」区域后点上面按钮。中文用 Windows 自带 OCR，不用装 Tesseract。</div>
     </div>
 
-    <div class="sec">
+    <div class="sec" style="max-width:none">
       <h3>触发方式</h3>
       <div class="seg" id="trigSeg">
         <button data-trig="vanish" class="on">等按钮消失</button>
@@ -258,7 +406,7 @@
       <div class="hint" id="trigHint">模板截的是<b>开卖前</b>的占位按钮（如"公示中"），开卖瞬间它消失 → 触发。</div>
     </div>
 
-    <div class="sec">
+    <div class="sec" style="max-width:none">
       <h3>参数</h3>
       <div class="row"><label>匹配阈值</label><span id="thVal" style="color:#fff">0.85</span></div>
       <input type="range" id="th" min="0.5" max="0.99" step="0.01" value="0.85">
@@ -281,8 +429,19 @@
 
   <!-- ============ 队列 ============ -->
   <div class="pane" id="pane-queue">
+    <div class="phead"><h1>任务队列</h1><span class="desc">一行一个商品，到点自动开抢</span></div>
+
     <div class="sec">
-      <h3>添加任务</h3>
+      <h3>队列 <span id="qCount" style="color:var(--txt-3);font-weight:400"></span></h3>
+      <div id="taskList"><div class="hint">队列是空的</div></div>
+      <div class="row" style="margin-top:9px">
+        <button class="tiny" id="btnClearDone">清掉已完成</button>
+        <button class="tiny" id="btnResetAll">全部重置</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>添加单条</h3>
       <div class="row"><input type="text" id="tName" placeholder="商品名，如 M4A1 砖皮"></div>
       <div class="row"><input type="text" id="tKw" placeholder="别名/关键词，逗号分隔（可选）"></div>
       <div class="row" style="align-items:flex-start;gap:6px">
@@ -314,21 +473,14 @@
         <button class="wide" id="btnBatch">批量加入队列</button>
       </div>
     </div>
-
-    <div class="sec">
-      <h3>队列 <span id="qCount" style="color:var(--dim);font-weight:400"></span></h3>
-      <div id="taskList"><div class="hint">队列是空的</div></div>
-      <div class="row" style="margin-top:9px">
-        <button class="tiny" id="btnClearDone">清掉已完成</button>
-        <button class="tiny" id="btnResetAll">全部重置</button>
-      </div>
-    </div>
   </div>
 
   <!-- ============ 砖皮 ============ -->
   <div class="pane" id="pane-brick">
+    <div class="phead"><h1>砖皮知识库</h1><span class="desc">11 个赛季的砖皮 / 稀有度 / 成色</span></div>
+
     <div class="sec">
-      <h3>识别 <span id="brickCur" style="color:var(--dim);font-weight:400"></span></h3>
+      <h3>识别 <span id="brickCur" style="color:var(--txt-3);font-weight:400"></span></h3>
       <div class="row">
         <input type="text" id="brickQ" placeholder="粘贴或输入，如 M7 棱镜攻势 极品S">
       </div>
@@ -353,6 +505,8 @@
 
   <!-- ============ 运行 ============ -->
   <div class="pane" id="pane-run">
+    <div class="phead"><h1>运行与校时</h1><span class="desc">状态和日志常驻在右栏</span></div>
+
     <div class="sec">
       <h3>执行</h3>
       <div class="row"><button class="wide primary" id="btnDry">演练整队（不点击）</button></div>
@@ -377,21 +531,27 @@
       <div class="row" style="margin-top:8px"><button class="wide" id="btnLat">测一次</button></div>
       <div class="hint">TCP 握手往返时间，取最小值。这是客户端能测到的、最接近"点击到服务器"的延迟。</div>
     </div>
+  </div>
 
-    <div class="sec">
-      <h3>状态</h3>
+  </main>
+
+  <!-- ============ 右：常驻状态 + 日志 ============ -->
+  <aside class="side">
+    <div class="head"><h2>实时状态</h2></div>
+    <div class="sec" style="border-bottom:1px solid var(--line)">
       <div class="kv"><span>状态机</span><span id="stState">idle</span></div>
       <div class="kv"><span>检测频率</span><span id="stHz">0 Hz</span></div>
       <div class="kv"><span>相关度</span><span id="stScore">0.000</span></div>
       <div class="kv"><span>点击次数</span><span id="stClicks">0</span></div>
       <div class="kv"><span>已运行</span><span id="stElapsed">0s</span></div>
     </div>
-
-    <div class="sec">
-      <h3>日志</h3>
-      <div id="log"></div>
+    <div class="head" style="display:flex;align-items:center;gap:6px">
+      <h2 style="flex:1">日志</h2>
+      <button class="tiny" id="btnLogClear" title="只清屏幕上的显示，不影响引擎">清屏</button>
     </div>
-  </div>
+    <div id="log"></div>
+  </aside>
+
 </div>
 
 <script>
@@ -612,6 +772,7 @@ const ST_CN = {pending:'待命', armed:'已布防', running:'执行中', done:'�
 function renderTasks(tasks) {
   const box = $('#taskList');
   $('#qCount').textContent = tasks.length ? `(${tasks.length})` : '';
+  $('#navQCount').textContent = tasks.length || '';
   if (!tasks.length) { box.innerHTML = '<div class="hint">队列是空的</div>'; return; }
   const now = Date.now() / 1000;
   box.innerHTML = tasks.map(t => {
@@ -823,16 +984,36 @@ $('#btnStop').addEventListener('click', () => api('/api/scheduler/stop', {}));
 const ENGINE_CN = {idle:'空闲', watch:'监视中', fire:'点击购买', confirm:'确认中', done:'完成', abort:'已中止'};
 
 let lastLogKey = '';
+// 距底部小于这个值才算「还在跟」，用户上翻看历史时不强制拉回（Woodpecker 的做法）
+const LOG_FOLLOW_PX = 5;
 function renderLog(items) {
   const box = $('#log');
   const key = items.length + '|' + (items.length ? items[items.length-1].msg : '');
   if (key === lastLogKey) return;
   lastLogKey = key;
+  const follow = box.scrollHeight - box.scrollTop - box.clientHeight <= LOG_FOLLOW_PX;
+  // 时间戳和正文分成两列，不要靠空格对齐
   box.innerHTML = items.map(m =>
-    `<div class="${m.level}"><span class="t">${m.t}</span>  ${escapeHtml(m.msg)}</div>`
+    `<div class="${m.level}"><span class="t">${m.t}</span><span class="m">${escapeHtml(m.msg)}</span></div>`
   ).join('');
-  box.scrollTop = 1e9;
+  if (follow) box.scrollTop = 1e9;
 }
+
+$('#btnLogClear').addEventListener('click', () => {
+  // 只清屏幕上的显示，不影响引擎里已经记录的日志
+  $('#log').innerHTML = '';
+  lastLogKey = '';
+});
+
+/* ---------------- 无边框窗口的自绘按钮 ---------------- */
+// 浏览器里直接打开时没有 pywebview，按钮点了不该报错
+$('#btnMin').addEventListener('click', () => {
+  if (window.pywebview?.api?.minimize) window.pywebview.api.minimize();
+});
+$('#btnClose').addEventListener('click', () => {
+  if (window.pywebview?.api?.destroy) window.pywebview.api.destroy();
+  else window.close();
+});
 
 async function poll() {
   try {

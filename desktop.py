@@ -58,6 +58,25 @@ def _pick_port(host, want):
     raise RuntimeError(f"{want}~{want + 20} 都被占用")
 
 
+class WinCtl:
+    """暴露给页面 JS 的窗口控制。
+
+    无边框窗口没有系统标题栏，最小化/关闭得由页面自己触发，
+    而 pywebview 不内置这些方法 —— 必须用 js_api 显式暴露。
+    """
+
+    def __init__(self):
+        self.win = None
+
+    def minimize(self):
+        if self.win is not None:
+            self.win.minimize()
+
+    def destroy(self):
+        if self.win is not None:
+            self.win.destroy()
+
+
 def _doctor():
     """打印运行时路径和关键依赖状态。
 
@@ -121,11 +140,20 @@ def main():
         raise RuntimeError(f"服务没起来（{url}）")
     _log("服务已就绪，开始建窗口")
 
+    ctl = WinCtl()
     try:
+        # 无边框：去掉系统标题栏和外圈边。
+        # easy_drag=False —— 全页可拖会和框选拖拽打架，改成只让顶栏可拖
+        # （页面里给顶栏加 .pywebview-drag-region，见 web/index.html）。
+        # shadow=True 保留 Windows 的圆角和投影，否则窗口会像一块贴纸。
         win = webview.create_window(
             "SJZ 抢购控制台", url,
             width=args.width, height=args.height, min_size=(900, 620),
+            frameless=True, easy_drag=False, shadow=True,
+            background_color="#0d1117",
+            js_api=ctl,
         )
+        ctl.win = win
         _log("create_window 返回")
         _log("调用 webview.start()")
         webview.start()
