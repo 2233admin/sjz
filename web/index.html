@@ -179,6 +179,13 @@
     display: block; user-select: none;
   }
   #overlay { position: absolute; cursor: crosshair; }
+  /* 预览连不上时的提示，别让玩家对着空白猜 */
+  .stream-tip {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    font-size: 12.5px; color: var(--txt-3); pointer-events: none;
+    background: var(--panel); padding: 8px 16px; border-radius: var(--r-md);
+    border: 1px solid var(--line);
+  }
 
   .box { position: absolute; border: 2px solid; pointer-events: none; }
   .box.buy { border-color: var(--accent); }
@@ -621,20 +628,20 @@
     </div>
 
     <div class="sec">
-      <h3>校时</h3>
-      <div class="kv"><span>本机偏差</span><span id="clkOff">--</span></div>
+      <h3>对时间<span class="dnote" style="margin-left:auto;text-transform:none;letter-spacing:0;font-weight:400">抢购按这个时间算</span></h3>
+      <div class="kv"><span>你的电脑快了/慢了</span><span id="clkOff">--</span></div>
       <div class="kv"><span>网络延迟</span><span id="clkDelay">--</span></div>
       <div class="kv"><span>服务器</span><span id="clkSrv">--</span></div>
-      <div class="kv"><span>校时后时间</span><span id="clkNow">--</span></div>
+      <div class="kv"><span>校准后的时间</span><span id="clkNow">--</span></div>
       <div class="row" style="margin-top:8px"><button class="wide" id="btnSync"><svg class="ic sm"><use href="#i-clock"/></svg>重新校时</button></div>
-      <div class="hint">抢购按校时后的时钟算。本机偏差几百毫秒的话，到点判断会整体偏。</div>
+      <div class="hint">抢购是按这个时间点触发的。你电脑的时间如果偏了几百毫秒，就会抢早或抢晚。</div>
     </div>
 
     <div class="sec">
-      <h3>测速</h3>
+      <h3>测网速</h3>
       <div id="latList"><div class="hint">还没测过</div></div>
       <div class="row" style="margin-top:8px"><button class="wide" id="btnLat"><svg class="ic sm"><use href="#i-arrow-clockwise"/></svg>测一次</button></div>
-      <div class="hint">TCP 握手往返时间，取最小值。这是客户端能测到的、最接近"点击到服务器"的延迟。</div>
+      <div class="hint">看你的网络到游戏服务器有多快。数字越小，开抢时越占便宜。</div>
     </div>
   </div>
 
@@ -697,7 +704,13 @@ $('#tabs').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   [...e.currentTarget.children].forEach(c => c.classList.toggle('on', c === b));
   document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + b.dataset.tab));
-  if (b.dataset.tab === 'setup') setTimeout(syncOverlay, 30);
+  if (b.dataset.tab === 'setup') {
+    // 切走时 #pane-setup 是 display:none，Chromium 会**中止** <img> 的 MJPEG
+    // 请求。切回来必须重新拉流，否则预览白着 —— 而且它不会自己恢复。
+    const img = $('#stream');
+    if (img.naturalWidth === 0) _streamTries = 0, startStream();
+    setTimeout(syncOverlay, 30);
+  }
 });
 
 /* ---------------- 预览对齐 ---------------- */
@@ -1223,18 +1236,38 @@ function refreshThumbs() {
 /* ---------------- 预览流 ---------------- */
 // 为什么不能只写一行 src = '/api/stream'：
 // 实测在 WebView2 里，页面刚加载完就设 MJPEG 的 src，连接有时根本不建立 ——
-// 表现是 naturalWidth 一直是 0、预览区空白，而且**不报错**。
-// 同一个页面里把 src 重新设一次就立刻好了。所以这里做重试。
-let _streamTries = 0;
+// 表现是 naturalWidth 一直是 0、预览区空白，而且**不报错**（没有 error 事件
+// 可以捕获）。同一个页面里把 src 重新设一次就立刻好了，所以只能主动轮询重试。
+//
+// 重试间隔递增（1s,2s,3s…）并持续到成功为止：冷启动的 exe 里服务端要建
+// OCR 引擎、读模板图，头几秒可能确实还没准备好，放弃太早就会留下空白预览。
+let _streamTries = 0, _streamTimer = null;
 function startStream() {
   const img = $('#stream');
+  clearTimeout(_streamTimer);
   img.src = '/api/stream?t=' + Date.now();
   _streamTries++;
-  // 3 秒还没看到画面就再设一次，最多 5 次
-  setTimeout(() => {
-    if (img.naturalWidth > 0) { _streamTries = 0; return; }
-    if (_streamTries < 5) startStream();
-  }, 3000);
+  // 连了 6 秒还没画面就提示一句 —— 空白画面不给任何解释是最糟的
+  if (_streamTries === 4) {
+    let tip = document.getElementById('streamTip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'streamTip';
+      tip.className = 'stream-tip';
+      $('#wrap').appendChild(tip);
+    }
+    tip.textContent = '正在连接游戏画面…';
+  }
+  const wait = Math.min(1000 * _streamTries, 5000);
+  _streamTimer = setTimeout(() => {
+    if (img.naturalWidth > 0) {                 // 通了，清掉提示
+      _streamTries = 0;
+      const tip = document.getElementById('streamTip');
+      if (tip) tip.remove();
+      return;
+    }
+    startStream();
+  }, wait);
 }
 
 /* ---------------- 初始化 ---------------- */
