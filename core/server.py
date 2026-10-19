@@ -125,6 +125,9 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(r"/api/template/(buy|confirm)", path)
         if m:
             return self._template_image(m.group(1), query.get("task_id", [None])[0])
+        # web/ 下的普通文件（assets/ 里的图片等）。放在 API 之后，避免抢占路由。
+        if path.startswith("/assets/"):
+            return self._asset(path[len("/assets/"):])
         return self._send(404, "not found", "text/plain; charset=utf-8")
 
     def do_POST(self):
@@ -205,6 +208,25 @@ class Handler(BaseHTTPRequestHandler):
         p = os.path.join(STATIC, name)
         if not os.path.isfile(p):
             return self._send(404, "missing " + name, "text/plain; charset=utf-8")
+        with open(p, "rb") as f:
+            self._send(200, f.read(), ctype)
+
+    def _asset(self, rel):
+        """web/assets/ 下的文件。只认白名单后缀，且必须仍在 assets 目录内。
+
+        前端引用的背景图和 logo 走这里。名字来自 HTTP 路径，所以必须挡住
+        `../` 穿越 —— 本服务绑在 127.0.0.1，但浏览器里任何一个页面都能发请求。
+        """
+        ext = os.path.splitext(rel)[1].lower()
+        ctype = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                 ".webp": "image/webp", ".svg": "image/svg+xml",
+                 ".ico": "image/x-icon"}.get(ext)
+        if not ctype:
+            return self._send(404, "not found", "text/plain; charset=utf-8")
+        base = os.path.join(STATIC, "assets")
+        p = os.path.normpath(os.path.join(base, rel))
+        if not (p == base or p.startswith(base + os.sep)) or not os.path.isfile(p):
+            return self._send(404, "not found", "text/plain; charset=utf-8")
         with open(p, "rb") as f:
             self._send(200, f.read(), ctype)
 
