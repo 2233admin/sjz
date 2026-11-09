@@ -1631,3 +1631,29 @@ fa59b8fa 19:29 / b5a50cc0 19:15 / 319accdc 18:24 / 25a3c42 17:24 / 697db934 17:1
 真机提醒: **未触发**（离线五路仅离线5 有交付；矩阵无「必须开游戏」清单；游戏未运行）。
 需要用户输入: 三角币余额 **8 < 最低单价 10**（11-08 14:32 首提，~22h 未变，仍阻塞真机购买链路验证）。
 异常建议: ①round9 缺 ledger/pytest 收尾，建议盯到 12:45，仍无则催补 ledger 或将这 4 个改动按域提交后重跑全量回归；②其余 11 路 >42.9h 零产物，建议重派或移出清单；③TEMP 88 项待收尾清理。
+
+---
+
+> 第八十八次巡检快照 2026-11-09 13:02
+> 工具说明: 本环境仍无 list_sessions（第 88 次查无）；判定依据 = git 提交/工作树 + 文件 mtime + 进程命令行 + 端口 + pytest 缓存 + TEMP 探针 + 可见窗口枚举。
+
+| 时间戳 | 会话/线 | 状态 | 变化/关键数字 |
+|---|---|---|---|
+| 12:33→12:57 | **性能/演化线**（疑离线5 935cc15a） | **round9 收口：accepted**（上轮为「未入 ledger」） | `evo/runs/round9_20261109/ledger.json` 12:57:23 写入，status=accepted；pytest **2537 passed / 22 skipped / 2 xfailed / 0 failed**（601.75s）；证据齐套（bench base/cand × s1/s2、seeds 10 组、pytest_applied.xml、red_review_final.md） |
+| 12:57 | round9 指标 | 入册 | `flow.item_e2e_full.p95` 3071.82 → **3000.38**（mean -2.32%，median -1.99%）；p50 2665.78 → 2599.89（-2.18%）；unlock 段 p50 **-63.5ms** / p95 **-72.0ms**；10 种子中 9 个 p95 改善 ≥1%；同码噪声 p50 0.64% / p95 1.32% |
+| 12:54 | 候选回滚 | **prefetch 方案 rejected+reverted** | `09-unlock-due-post-read.patch` 由 6,815B 缩到 3,025B（只剩 due 改动）；`core/engine.py` 内 `prefetch` 引用 **0 处**；仅保留 `engine.py:3314 cd.due(time.perf_counter(), 0.0)` |
+| 12:49–12:50 | r8 遗留缺陷 | **已修复** | `tools/soak.py:741` 补 stop_on_bought 形参；3 个测试桩同步修（test_engine_shot/test_records/test_fix_d）；修复前 11 failed → 修复后 0 failed |
+| 13:01 | git | 零新提交 | HEAD `2133856`（12:33 巡检快照），领先 origin/main **23**；工作树 **7 M**（`core/engine.py` +36、`perf/bench/flow_bench.py` +21、`tests/test_engine_insufficient.py` +38、其余 4 个桩 ±1~2，合计 **+95/−9**）+ 2 未跟踪补丁（08/09） |
+| 12:47 | config | 无实质变更 | `config.json` 与 `config.json.good` 逐行一致（diff=0），prefetch 开关未残留 |
+| 13:01 | data/ | 51 → **59 组** | 12:39–12:41 新增 8 组台架夹具（buy/confirm 各 1，非真机截图） |
+| 13:01 | 运行态 | 合规（round9 已结束） | 无 evo/pytest/soak/load 进程残留；:8081 ← 45872（OCR）、:8080 ← 49008（tok capture，非本项目）；8799/8801 无监听；可见窗口 **14**，无 dafors 自有 |
+| 13:01 | TEMP | 待清理 | `dafors_*` 25 目录 / **9,761** 文件（上轮 63 文件；增量来自 `dafors_rounds` 台架快照） |
+| 13:01 | 其余 11 路 | **无产物 >43.6h** | 缺口1 319accdc / 缺口2 da85f6a6 / 缺口4 eea45452 / 真机矩阵 fa2c17bf / 离线1 44755992 / 离线2 697db934 / 离线3 b5a50cc0 / 离线4 25a3c42d / 离线5 之外的 935cc15a 已按上轮归属性能线 / 01b ea4e1e45 / 合并收口 fa59b8fa |
+
+变更会话: **性能/演化线（疑 935cc15a）** — round9 从「有增益未入册」转为 **accepted 入册**，p95 降 2.32%，2537 条全绿，prefetch 风险方案已回滚。
+
+真机提醒: **未触发**（离线五路中仅离线5 交付；离线1/2/3/4 零产物；矩阵未给「必须开游戏」清单）。
+
+需要用户输入: 三角币余额 **8 < 最低单价 10**（11-08 14:32 首提，~22.5h 未变，仍阻塞真机购买链路）。
+
+异常建议: ①其余 11 路 >43.6h 零产物且无进程、无 worktree（仅 main 单工作树，`dafors-wt` 停在 11-07 20:09），建议直接重派而非继续等；②round9 的 7 个改动仍未提交，建议按域拆两笔（engine+bench / tests+soak）提交，避免下次台架基线再次挂在脏树上；③TEMP 9,761 文件建议在 next 台架前清空 `dafors_rounds` 旧轮次。
