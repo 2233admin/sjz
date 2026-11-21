@@ -1176,8 +1176,10 @@ def evaluate(blob, *, revocations=None, state=None, state_trusted=True,
                             **extra)
         extra["remaining_s"] = round(exp - check_now, 1)
 
-    if kind == ANCHOR_ONLINE and (payload.get("perpetual")
-                                  or payload.get("offline_ok")):
+    # 永久许可：payload 带 perpetual / offline_ok 时，到期与租期都不看系统时间
+    # （改时钟、回拨、删账本都不影响），且与锚点来源无关 —— 本机签发的永久卡
+    # 在 unproven 锚点上同样不设 7 天封顶。其余许可仍走下面的租期判定。
+    if payload.get("perpetual") or payload.get("offline_ok"):
         extra["lease_remaining_s"] = None
         return Decision("ok", True, "永久许可", **extra)
     # 未联网锚点没有「永久」：本地签出来的许可也必须按时联网，否则可无限续期

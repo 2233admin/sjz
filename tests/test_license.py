@@ -740,13 +740,17 @@ def test_scn4_offline_beyond_lease_refused_with_reason(fresh_machine):
     assert "7 + 3" in d.reason and "必须联网校验" in d.reason
 
 
-def test_unproven_anchor_caps_perpetual_license():
-    """本地签的永久卡也受租期封顶：unproven 不能变相无限续期。"""
+def test_perpetual_license_ignores_anchor_and_lease():
+    """永久卡（perpetual）与锚点无关：unproven 也不受 7 天封顶，且不看时间。
+
+    非永久许可的租期封顶仍由 test_scn4_offline_beyond_lease_refused_with_reason
+    等用例覆盖 —— 这里只锁定「持卡人明确签了永久」这一条路径。
+    """
     blob = make_blob(perpetual=True)
     d = ev(blob, state=unproven_state(born=T0), now=T0, mono=1000)
     assert d.ok and d.anchor == "unproven"
-    assert d.lease_remaining_s == 168 * 3600     # 不是 None（不是「永久」）
+    assert d.lease_remaining_s is None           # 永久：没有租期余量
     st = unproven_state(born=T0, used=10 * DAY, now=T0 + 10 * DAY,
                         mono=1000 + 10 * DAY)
     d2 = ev(blob, state=st, now=T0 + 11 * DAY, mono=1000 + 11 * DAY)
-    assert d2.status == "need_online" and not d2.ok
+    assert d2.ok and d2.status == "ok"
