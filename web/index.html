@@ -5519,7 +5519,7 @@ async function rpApplyCalib() {
   if (!yes) return;
   RP.busy = true;
   try {
-    const d = await api('/api/calibrate', { apply_proposal: true }, { method: 'POST' });
+    const d = await api('/api/calibrate', { apply_proposal: true }, { method: 'POST', timeout: 40000 });
     RP.data = d; RP.loaded = true; RP.draft = {}; RP.dirty.clear();
     if (S.config) {
       if (d.calibration) S.config.calibration = d.calibration;
@@ -5548,7 +5548,7 @@ async function rpCalibrate() {
   if (btn) { btn.disabled = true; btn.textContent = '自动标定中…'; }
   if (st) st.textContent = '正在抓取游戏客户区并校验锚点…';
   try {
-    const d = await api('/api/calibrate', {}, { method: 'POST' });
+    const d = await api('/api/calibrate', {}, { method: 'POST', timeout: 40000 });
     RP.data = d; RP.loaded = true; RP.draft = {}; RP.dirty.clear();
     if (S.config) {
       if (d.calibration) S.config.calibration = d.calibration;
