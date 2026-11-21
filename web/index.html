@@ -5115,6 +5115,8 @@ function paintCalib() {
 
 async function rpApplyCalib() {
   if (RP.busy) return;
+  const yes = await ask({ title: '应用标定提议', body: '会用自动标定算出的区域覆盖你现在保存的区域，并丢掉还没保存的手动调整。不满意可以再手动改回来。', okText: '应用提议' });
+  if (!yes) return;
   RP.busy = true;
   try {
     const d = await api('/api/calibrate', { apply_proposal: true }, { method: 'POST' });
@@ -5233,9 +5235,13 @@ function rpResetOne() {
   toast('已把「' + rpLabel(RP.sel) + '」恢复默认（还没保存）', 'ok');
 }
 
-function rpResetAll() {
+async function rpResetAll() {
   const names = rpEditable();
   if (!names.length) return;
+  if (RP.dirty.size) {
+    const yes = await ask({ title: '全部恢复默认', body: '你手动调过的区域会全部回到默认位置，没保存的调整会丢失。保存之前随时可以重新调整。', okText: '全部恢复' });
+    if (!yes) return;
+  }
   RP.dirty.clear();
   for (const n of names) { RP.draft[n] = null; RP.dirty.add(n); }
   rpSyncInputs(); rpNote(); renderRegions(); rpUpdateFoot(); rpScheduleDraw();
