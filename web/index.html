@@ -1058,6 +1058,33 @@
   .globalbar .g-detail{font-size:12px;color:rgba(214,255,236,.7)}
   .globalbar .g-state{font-size:12px}
   .globalbar .g-clock{font-size:12.5px}
+
+  /* ---------- 任务设置栏：HUD 分区条、方框输入、清楚的摘要卡 ---------- */
+  .panel-head{padding-right:28px}
+  #panelTaskSet .panel-head .tag{margin-right:6px}
+  #panelTaskSet .set-form{gap:12px 10px}
+  #panelTaskSet .set-sum{background:rgba(15,247,150,.07);border:1px solid rgba(15,247,150,.25);border-left:3px solid var(--accent);padding:8px 10px;color:var(--text);font-size:12px;line-height:1.7;box-shadow:0 0 12px rgba(15,247,150,.08) inset}
+  #panelTaskSet .set-sum b{color:var(--accent);text-shadow:0 0 6px rgba(15,247,150,.5);margin-right:4px}
+  #panelTaskSet .set-sum.off{border-color:var(--line-2);border-left-color:var(--warn);background:rgba(232,176,75,.06)}
+  #panelTaskSet .set-sum.off b{color:var(--warn);text-shadow:none}
+  #panelTaskSet .set-grp{margin:8px 0 0;padding:5px 10px;border:0;border-left:3px solid var(--accent);background:linear-gradient(90deg,rgba(15,247,150,.16),transparent 80%);
+    color:#fff;font-size:12px;font-weight:800;letter-spacing:.16em;gap:10px;align-items:center}
+  #panelTaskSet .set-grp span{font-family:var(--font-num);font-size:11px;color:var(--accent);letter-spacing:.06em;text-shadow:0 0 6px rgba(15,247,150,.6)}
+  #panelTaskSet .set-form > .set-sum + .set-grp,#panelTaskSet .set-form > .set-cta + .set-grp{margin-top:6px;border-top:0;padding-top:5px}
+  #panelTaskSet .fld > label,#panelTaskSet .fld > .lb{font-size:11.5px;color:var(--text-2);letter-spacing:.06em;margin-bottom:3px}
+  #panelTaskSet .fld > label::before{content:"";width:3px;height:9px;background:rgba(15,247,150,.55);transform:skewX(-18deg);flex:0 0 auto}
+  #panelTaskSet .set-form input:not([type=checkbox]):not([type=radio]),#panelTaskSet .set-form select{
+    background:rgba(15,247,150,.045);border:1px solid rgba(15,247,150,.24);border-radius:0;padding:6px 9px;color:var(--text);font-size:12px;
+    clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,0 100%);transition:border-color .15s,background .15s}
+  #panelTaskSet .set-form input:hover,#panelTaskSet .set-form select:hover{border-color:rgba(15,247,150,.5)}
+  #panelTaskSet .set-form input:focus,#panelTaskSet .set-form select:focus{border-color:var(--accent);background:rgba(15,247,150,.1);box-shadow:none}
+  #panelTaskSet .set-form input::placeholder{color:var(--text-3)}
+  #panelTaskSet .seg{border:1px solid rgba(15,247,150,.24)}
+  #panelTaskSet .seg button{font-weight:700;letter-spacing:.06em}
+  #panelTaskSet .seg button.on{background:rgba(15,247,150,.2);color:#fff;box-shadow:inset 0 -2px 0 var(--accent)}
+  #panelTaskSet .unit{font-family:var(--font-num);color:var(--text-3)}
+  #panelTaskSet .fmsg:not(:empty){color:var(--bad);font-size:11px;margin-top:3px}
+  #panelTaskSet .panel-foot{border-top:1px solid rgba(15,247,150,.25);background:rgba(5,11,8,.92)}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
