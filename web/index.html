@@ -500,7 +500,6 @@
   .lf-body{display:block;padding:0 11px 9px;animation:lfIn var(--dur) ease}
   .lf-block.collapsed .lf-body{display:none}
   @keyframes lfIn{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){.lf-body{animation:none}}
   .lf-chips{display:flex;flex-direction:column;gap:2px}
   .lf-chip{display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:var(--r-xs);font-size:11.5px;color:var(--text-2);text-align:left;transition:background var(--dur),color var(--dur)}
   .lf-chip:hover{background:#1d1c1b;color:var(--text)}
@@ -825,10 +824,6 @@
   @media (max-width:560px){
     .statcards{grid-template-columns:minmax(0,1fr)}
     .taskbar select{max-width:none;flex:1 1 110px}
-  }
-  @media (prefers-reduced-motion:reduce){
-    *{transition-duration:0s!important;animation-duration:0s!important}
-    .skel{background:#242322}
   }
 
   /* ---------- 修复：堆叠提示 / 上手引导 / 逐项检查 ---------- */
