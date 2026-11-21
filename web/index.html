@@ -1025,8 +1025,8 @@
 
   /* ---------- 示波器条：荧光余辉轨迹，运行时随点击频率起伏 ---------- */
   .globalbar{position:relative;min-height:34px;overflow:hidden}
-  .globalbar > *:not(#scope){position:relative;z-index:1}
-  #scope{position:absolute !important;inset:0;width:100%;height:100%;z-index:0 !important;pointer-events:none}
+  .globalbar > *:not(.vscope){position:relative;z-index:1}
+  .globalbar > canvas.vscope{position:absolute !important;inset:0;width:100%;height:100%;z-index:0 !important;pointer-events:none}
   .g-txt,.g-detail,.g-state,.g-clock{text-shadow:0 0 6px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.9)}
 
   /* ---------- 示波器屏：系统状态与信息都在屏上以 OSD 读数显示，波形在下半区 ---------- */
@@ -1039,6 +1039,19 @@
   .globalbar .g-clock{color:var(--accent);font-family:var(--font-num);font-size:11.5px;letter-spacing:.08em;text-shadow:0 0 6px rgba(15,247,150,.6)}
   .globalbar .g-ico{margin-top:1px}
   .globalbar .g-bar{display:none}
+
+  /* 屏上的字由 canvas 矢量描边绘制；DOM 文字保留布局与读屏，但不显示 */
+  .globalbar{flex:0 0 34px !important;height:34px !important;align-items:center !important;padding:0 14px !important}
+  .globalbar [data-vs]{color:transparent !important;text-shadow:none !important}
+  .globalbar .g-state{border-color:rgba(15,247,150,.5)}
+  .globalbar .g-ico{margin-top:0}
+  .scope-box{position:relative;height:104px;margin:0 0 10px;background:#050b08;border:1px solid rgba(15,247,150,.35);box-shadow:inset 0 0 22px rgba(15,247,150,.1)}
+  .scope-box canvas.vscope{position:absolute;inset:0;width:100%;height:100%}
+  .scope-src{position:absolute;inset:0;padding:8px 12px;display:flex;flex-direction:column;justify-content:center;gap:2px;pointer-events:none}
+  .scope-src [data-vs]{color:transparent;white-space:nowrap;line-height:1.35}
+  .vs-big{font-size:22px;font-weight:800;letter-spacing:.12em}
+  .vs-mid{font-size:12px;font-family:var(--font-num);letter-spacing:.04em}
+  .vs-live{font-size:11px;font-family:var(--font-num);letter-spacing:.06em;margin-top:2px}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
@@ -1179,13 +1192,13 @@ body.mini #miniBar{
 </header>
 
 <div class="globalbar" role="status" aria-live="polite">
-  <canvas id="scope" aria-hidden="true"></canvas>
+  <canvas class="vscope" aria-hidden="true"></canvas>
   <span class="g-ico" id="gIco"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.6"/><path d="M8 4.8V8l2.2 1.4"/></svg></span>
-  <span class="g-scroll"><span class="g-txt" id="gText">正在连接本地控制台</span></span>
-  <span class="g-detail" id="gDetail"></span>
+  <span class="g-scroll"><span class="g-txt" id="gText" data-vs>正在连接本地控制台</span></span>
+  <span class="g-detail" id="gDetail" data-vs></span>
   <span class="g-right">
-    <span class="g-state" id="gState">连接中</span>
-    <span class="g-clock num" id="gClock">--:--:--</span>
+    <span class="g-state" id="gState" data-vs>连接中</span>
+    <span class="g-clock num" id="gClock" data-vs>--:--:--</span>
   </span>
   <span class="g-bar" id="gBar"></span>
 </div>
@@ -3053,10 +3066,26 @@ function renderBeat() {
   }).join('');
   const autoRow = (adp && jit) ? `<div class="beat-row beat-auto"><span class="bl">自动随机 <span class="q" tabindex="0" data-tip="开：每次开点的延迟按上一轮实测自动校正，再加 0~${esc(jit.value > 0 ? jit.value : 10)} 毫秒随机量，节奏不会每轮一样。关：完全按下面手动填的数字，每轮一样。">?</span></span><span class="bv"><button class="switch${auto ? ' on' : ''}" role="switch" aria-checked="${auto}" data-act="beat-auto" aria-label="自动随机"><span class="knob"></span></button></span></div>
     <div class="beat-note">${auto ? `延迟自动校正，每次再随机 0~${esc(jit.value)} 毫秒` : '现在每轮节奏完全一样，开启后由程序自动校正并随机'}</div>` : '';
-  box.innerHTML = autoRow + `<details class="beat-more"${wasOpen || !autoRow ? ' open' : ''}><summary>手动调整</summary>${rows}</details>`;
+  box.innerHTML = beatScopeHtml(adp, jit, auto) + autoRow + `<details class="beat-more"${wasOpen || !autoRow ? ' open' : ''}><summary>手动调整</summary>${rows}</details>`;
   paintBeatProgress();
 }
 
+function beatScopeHtml(adp, jit, auto) {
+  const hz = switchItem('fire.hz'), dl = switchItem('fire.delay');
+  return `<div class="scope-box"><canvas class="vscope" aria-hidden="true"></canvas><div class="scope-src">
+    <span class="vs-big" data-vs>${auto ? '自动随机' : '固定节奏'}</span>
+    <span class="vs-mid" data-vs>${hz ? '频率 ' + esc(hz.value) + ' 次/秒' : ''}</span>
+    <span class="vs-mid" data-vs>${dl ? '延迟 ' + esc(dl.value) + ' 毫秒' : ''}</span>
+    <span class="vs-mid" data-vs>${jit ? '随机 0~' + esc(jit.value) + ' 毫秒' : ''}</span>
+    <span class="vs-live" id="bsLive" data-vs>待命</span>
+  </div></div>`;
+}
+function tickBeatLive() {
+  const el = $('#bsLive'); if (!el) return;
+  const st = S.status || {}, eng = st.engine || {};
+  el.textContent = st.running ? `运行中  ${eng.stats ? (eng.stats.hz || 0) : 0} 次/秒  已点击 ${eng.stats ? (eng.stats.clicks || 0) : 0}` : '待命';
+}
+setInterval(tickBeatLive, 400);
 async function toggleBeatAuto() {
   const adp = switchItem('fire.adaptive'), jit = switchItem('fire.jitter');
   if (!adp || !jit) return;
@@ -5828,68 +5857,67 @@ document.addEventListener('click', e => {
   });
 });
 
-/* ---------- 示波器 ---------- */
-(function scope() {
-  const cv = document.getElementById('scope');
-  if (!cv) return;
-  const ctx = cv.getContext('2d');
-  let W = 0, H = 0, t = 0, amp = 0.08, spike = 0, lastClicks = null;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  function size() {
-    W = cv.clientWidth; H = cv.clientHeight;
-    cv.width = Math.max(1, W * dpr); cv.height = Math.max(1, H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-  }
-  size(); window.addEventListener('resize', size);
-  const MID = () => 24 + (H - 24) / 2;
-  function grat() {
+
+/* ---------- 示波器：用矢量描边把界面上的字“画”出来（荧光余辉 + 扫描高亮） ---------- */
+(function vscope() {
+  let t = 0;
+  function lineText(ctx, el, clipR, col) {
+    const txt = el.textContent; if (!txt) return;
+    const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return;
+    const cs = getComputedStyle(el);
+    const base = ctx.canvas.getBoundingClientRect();
+    const x = r.left - base.left, y = r.top - base.top;
     ctx.save();
-    ctx.strokeStyle = 'rgba(15,247,150,.13)'; ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let x = 0; x <= W; x += 40) { ctx.moveTo(x + .5, 24); ctx.lineTo(x + .5, H); }
-    ctx.moveTo(0, MID() + .5); ctx.lineTo(W, MID() + .5);
+    if (clipR) { ctx.beginPath(); ctx.rect(clipR.left - base.left, clipR.top - base.top, clipR.width, clipR.height); ctx.clip(); }
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    ctx.textBaseline = 'middle';
+    const jx = (Math.random() - .5) * .5, jy = (Math.random() - .5) * .5;
+    const cy = y + r.height / 2 + jy;
+    ctx.lineJoin = 'round'; ctx.lineWidth = parseFloat(cs.fontSize) > 16 ? 1.2 : 0.6;
+    ctx.shadowColor = `rgba(${col},.8)`; ctx.shadowBlur = parseFloat(cs.fontSize) > 16 ? 8 : 3;
+    ctx.fillStyle = `rgba(${col},${parseFloat(cs.fontSize) > 16 ? .14 : .55})`; ctx.fillText(txt, x + jx, cy);
+    ctx.strokeStyle = `rgba(${col},.95)`; ctx.strokeText(txt, x + jx, cy);
+    /* 扫描高亮：一条竖带扫过时，字笔画变白热 */
+    const W = base.width, bx = ((t * 160) % (W + 160)) - 80;
+    if (x + r.width > bx - 40 && x < bx + 40) {
+      ctx.beginPath(); ctx.rect(bx - 28 + 0, 0, 56, base.height); ctx.clip();
+      ctx.shadowBlur = 10; ctx.strokeStyle = 'rgba(220,255,240,.95)'; ctx.strokeText(txt, x + jx, cy);
+    }
+    ctx.restore();
+  }
+  function grat(ctx, W, H) {
+    ctx.save(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(15,247,150,.11)'; ctx.beginPath();
+    for (let x = 0; x <= W; x += 40) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); }
+    for (let y = 0; y <= H; y += 20) { ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); }
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(15,247,150,.28)'; ctx.beginPath();
-    for (let x = 0; x <= W; x += 8) { ctx.moveTo(x + .5, MID() - 3); ctx.lineTo(x + .5, MID() + 3); }
+    ctx.strokeStyle = 'rgba(15,247,150,.26)'; ctx.beginPath();
+    for (let x = 0; x <= W; x += 8) { ctx.moveTo(x + .5, H / 2 - 2); ctx.lineTo(x + .5, H / 2 + 2); }
     ctx.stroke(); ctx.restore();
   }
   function frame() {
     requestAnimationFrame(frame);
-    if (document.hidden || !W) return;
-    const st = S.status || {};
-    const eng = st.engine || {};
-    const running = !!st.running;
-    const clicks = eng.stats ? +eng.stats.clicks || 0 : 0;
-    if (lastClicks != null && clicks > lastClicks) spike = 1;
-    lastClicks = clicks;
-    const hz = running && eng.stats ? Math.min(40, +eng.stats.hz || 8) : 0;
-    const target = running ? 0.28 + Math.min(.2, hz / 120) : 0.16;
-    amp += (target - amp) * 0.05;
-    spike *= 0.93;
-    t += running ? 0.09 + hz / 400 : 0.03;
-    /* 余辉：整体按比例擦淡 */
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.fillRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'source-over';
-    grat();
-    const TOP = 24, mid = TOP + (H - TOP) / 2, A = (H - TOP) * 0.42 * amp;
-    const bad = (S.guard && S.guard.alert) || (st.engine && st.engine.state === 'abort');
+    if (document.hidden) return;
+    t += 0.016;
+    const bad = (S.guard && S.guard.alert) || (S.status && S.status.engine && S.status.engine.state === 'abort');
     const col = bad ? '240,96,106' : '15,247,150';
-    ctx.lineWidth = 1.6; ctx.lineJoin = 'round';
-    ctx.strokeStyle = `rgba(${col},.95)`; ctx.shadowColor = `rgba(${col},.9)`; ctx.shadowBlur = 7;
-    ctx.beginPath();
-    for (let x = 0; x <= W; x += 2) {
-      const u = x / 38 + t;
-      let y = Math.sin(u) * .55 + Math.sin(u * 2.3 + 1.3) * .3 + Math.sin(u * 5.1) * .15;
-      y += (Math.random() - .5) * (running ? .35 : .12);
-      /* 点击后在右侧留一个尖峰，随时间向左滚走 */
-      const d = (W - x) / W;
-      y += spike * Math.exp(-Math.pow((d - .12) * 14, 2)) * (running ? 2.4 : 0);
-      const py = mid - Math.max(-1, Math.min(1, y)) * A * 2.2;
-      if (x === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
-    }
-    ctx.stroke(); ctx.shadowBlur = 0;
+    document.querySelectorAll('canvas.vscope').forEach(cv => {
+      const par = cv.parentElement; if (!par) return;
+      const box = cv.getBoundingClientRect();
+      if (box.width < 2 || box.height < 2) return;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const w = Math.round(box.width * dpr), h = Math.round(box.height * dpr);
+      const ctx = cv.getContext('2d');
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, 0, box.width, box.height);
+      ctx.globalCompositeOperation = 'source-over';
+      grat(ctx, box.width, box.height);
+      par.querySelectorAll('[data-vs]').forEach(el => {
+        const sc = el.closest('.g-scroll');
+        lineText(ctx, el, sc ? sc.getBoundingClientRect() : null, col);
+      });
+    });
   }
   requestAnimationFrame(frame);
 })();
