@@ -730,7 +730,7 @@
   .tabs{background:none;border:0;padding:0;gap:2px}
   .tabs button{border-radius:0}
   .tabs button.on{background:none;box-shadow:none;border-bottom:2px solid var(--accent);color:#fff}
-  .set-sum{border-left:0;background:none;padding:0 0 8px;border-bottom:1px solid var(--line);color:var(--text)}
+  .set-sum{border-left:0;background:var(--bg);padding:0 0 8px;border-bottom:1px solid var(--line);color:var(--text)}
   .set-grp span{display:none}
   .set-grp{letter-spacing:.1em;color:var(--text-2)}
   .chips{gap:2px 14px}
@@ -784,6 +784,19 @@
   #statCards .scard.bad .sc-v{color:var(--bad)}
   #statCards .scard.warn .sc-act,#statCards .scard.bad .sc-act{display:inline-flex;height:20px;padding:0 7px;font-size:10.5px}
   #statCards .scard.warn .sc-v::after,#statCards .scard.bad .sc-v::after{content:none}
+  #btnDensity{display:none}
+  .ic{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto;vertical-align:-2px}
+  .tabs button .ic{margin-right:6px;opacity:.8}
+  .tabs button.on .ic{opacity:1;color:var(--accent)}
+  .side-tabs button .ic{margin-right:6px}
+  .side-tabs button.on .ic{color:var(--accent)}
+  .panel-head h2 .ic{margin-right:6px;color:var(--text-3)}
+  .tag .ic{width:11px;height:11px;margin-right:4px;vertical-align:-1px}
+  .state-dot + .btn .ic,.btn.ghost .ic{opacity:.85}
+  #taskSearch{padding-left:24px;background:no-repeat 4px 50%/14px url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23767574' stroke-width='1.6' stroke-linecap='round'><path d='M7 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM11 11l3 3'/></svg>")}
+  #statCards .scard .sc-ico{display:inline-grid;width:14px;height:14px;border:0;background:none}
+  #statCards .scard .sc-ico svg{width:13px;height:13px}
+  #statCards .scard .sc-dot{display:none}
   @media (max-width:1560px){
     .brand-t em{display:none}
     .plan{flex-basis:190px}
@@ -2632,6 +2645,7 @@ const STATE_TAG = {
   pending: ['等待', 'mute'], armed: ['待开卖', 'warn'], running: ['运行中', 'info'],
   done: ['已完成', 'ok'], failed: ['失败', 'bad'], skipped: ['已跳过', 'mute']
 };
+const ST_IC = { '等待': 'circle', '已停用': 'minus', '待开卖': 'clock', '运行中': 'play', '已完成': 'check', '失败': 'x', '已跳过': 'minus' };
 let taskFilter = { q: '', season: '', type: '' };
 let taskMode = 'loading', taskErr = '';
 
@@ -2707,7 +2721,7 @@ function taskRowsHtml(rows) {
       <td class="num">${esc(price)}</td>
       <td class="num">${quota}</td>
       <td><span class="num">${bought}</span><span class="mini-bar"><i style="width:${pct}%"></i></span></td>
-      <td><span class="tag ${label[1]}">${label[0]}</span></td>
+      <td><span class="tag ${label[1]}">${ic(ST_IC[label[0]] || 'circle')}${label[0]}</span></td>
     </tr>`;
   }).join('');
 }
@@ -3392,9 +3406,41 @@ function syncAutoClock() {
   S.clockSig = sig;
   paintStats();
 }
+/* ---------- 图标：统一 16px 线性，currentColor，不用 emoji ---------- */
+const IC = {
+  run: 'M9 1.8 3.6 9h4l-.9 5.2L12.4 7H8.4z',
+  lib: 'M2.5 2.5h4.5v4.5H2.5zM9 2.5h4.5v4.5H9zM2.5 9h4.5v4.5H2.5zM9 9h4.5v4.5H9z',
+  rec: 'M3 4h10M3 8h10M3 12h6',
+  ana: 'M3 13V8.5M8 13V3M13 13V6',
+  journal: 'M4 2.5h8.5v11H4zM6.6 5.5h4M6.6 8.2h4',
+  sliders: 'M3 5h10M3 11h10M6 3v4M10 9v4',
+  pulse: 'M1.5 8h3l2-5 3 10 2-5h3',
+  help: 'M8 14.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM6.2 6.4a1.9 1.9 0 1 1 2.6 1.7c-.6.3-.8.7-.8 1.3M8 11.6v.1',
+  check: 'M3 8.5l3 3 7-7',
+  pause: 'M5.5 3.5v9M10.5 3.5v9',
+  clear: 'M3 4.5h10M6 4.5V3h4v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5',
+  refresh: 'M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3',
+  circle: 'M8 13.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z',
+  clock: 'M8 13.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM8 5v3.2l2 1.2',
+  play: 'M5 3l8 5-8 5z',
+  x: 'M4 4l8 8M12 4l-8 8',
+  minus: 'M4 8h8'
+};
+function ic(n) { return IC[n] ? `<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="${IC[n]}"/></svg>` : ''; }
+function decorateIcons() {
+  [['#tab-run', 'run'], ['#tab-lib', 'lib'], ['#tab-rec', 'rec'], ['#tab-ana', 'ana'], ['#tab-journal', 'journal'], ['#tab-set', 'sliders'],
+   ['#btnGuide', 'help'], ['[data-act="bulk-on"]', 'check'], ['[data-act="bulk-off"]', 'pause'], ['[data-act="clear-done"]', 'clear'],
+   ['#btnTaskDel', 'clear'], ['.side-tabs [data-side="set"]', 'sliders'], ['.side-tabs [data-side="beat"]', 'pulse'],
+   ['.tasks-panel .panel-head h2', 'rec']
+  ].forEach(([sel, n]) => document.querySelectorAll(sel).forEach(el => {
+    if (!el.querySelector(':scope > svg.ic')) el.insertAdjacentHTML('afterbegin', ic(n));
+  }));
+}
+decorateIcons();
+
 function statCard(kind, key, title, value, sub, act, apiPath, actText) {
   const dot = kind === 'ok' ? 'ok' : kind === 'warn' ? 'warn' : kind === 'bad' ? 'bad' : '';
-  const btn = act ? `<button class="btn sm sc-act" data-act="${act}"${apiPath ? ` data-api="${apiPath}"` : ''}>${actText}</button>` : '';
+  const btn = act ? `<button class="btn sm sc-act" data-act="${act}"${apiPath ? ` data-api="${apiPath}"` : ''}>${ic(act === 'timesync' ? 'clock' : 'refresh')}${actText}</button>` : '';
   return `<div class="scard ${dot}" title="${String(sub).replace(/"/g, '&quot;')}">
     <div class="sc-ico">${iconOf(key)}</div>
     <div class="sc-body"><div class="sc-k">${title}</div><div class="sc-v">${value}</div><div class="sc-s">${sub}</div></div>
