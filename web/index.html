@@ -3190,26 +3190,10 @@ function renderBeat() {
   }).join('');
   const autoRow = (adp && jit) ? `<div class="beat-row beat-auto"><span class="bl">自动随机 <span class="q" tabindex="0" data-tip="开：每次开点的延迟按上一轮实测自动校正，再加 0~${esc(jit.value > 0 ? jit.value : 10)} 毫秒随机量，节奏不会每轮一样。关：完全按下面手动填的数字，每轮一样。">?</span></span><span class="bv"><button class="switch${auto ? ' on' : ''}" role="switch" aria-checked="${auto}" data-act="beat-auto" aria-label="自动随机"><span class="knob"></span></button></span></div>
     <div class="beat-note">${auto ? `延迟自动校正，每次再随机 0~${esc(jit.value)} 毫秒` : '现在每轮节奏完全一样，开启后由程序自动校正并随机'}</div>` : '';
-  box.innerHTML = beatScopeHtml(adp, jit, auto) + autoRow + `<details class="beat-more"${wasOpen || !autoRow ? ' open' : ''}><summary>手动调整</summary>${rows}</details>`;
+  box.innerHTML = autoRow + `<details class="beat-more"${wasOpen || !autoRow ? ' open' : ''}><summary>手动调整</summary>${rows}</details>`;
   paintBeatProgress();
 }
 
-function beatScopeHtml(adp, jit, auto) {
-  const hz = switchItem('fire.hz'), dl = switchItem('fire.delay');
-  return `<div class="scope-box"><canvas class="vscope" aria-hidden="true"></canvas><div class="scope-src">
-    <span class="vs-big" data-vs>${auto ? '自动随机' : '固定节奏'}</span>
-    <span class="vs-mid" data-vs>${hz ? '频率 ' + esc(hz.value) + ' 次/秒' : ''}</span>
-    <span class="vs-mid" data-vs>${dl ? '延迟 ' + esc(dl.value) + ' 毫秒' : ''}</span>
-    <span class="vs-mid" data-vs>${jit ? '随机 0~' + esc(jit.value) + ' 毫秒' : ''}</span>
-    <span class="vs-live" id="bsLive" data-vs>待命</span>
-  </div></div>`;
-}
-function tickBeatLive() {
-  const el = $('#bsLive'); if (!el) return;
-  const st = S.status || {}, eng = st.engine || {};
-  el.textContent = st.running ? `运行中  ${eng.stats ? (eng.stats.hz || 0) : 0} 次/秒  已点击 ${eng.stats ? (eng.stats.clicks || 0) : 0}` : '待命';
-}
-setInterval(tickBeatLive, 400);
 async function toggleBeatAuto() {
   const adp = switchItem('fire.adaptive'), jit = switchItem('fire.jitter');
   if (!adp || !jit) return;
