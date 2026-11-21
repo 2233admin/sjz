@@ -1,0 +1,68 @@
+﻿diff --git a/core/engine.py b/core/engine.py
+index f0941e9..4ac8778 100644
+--- a/core/engine.py
++++ b/core/engine.py
+@@ -3309,7 +3309,9 @@ class Engine:
+             if sec is not None:
+                 seen = True
+                 cd.observe(sec, now)
+-                if cd.due(now, 0.0):
++                # 用「读完之后」的时刻判到点：读表要 ~80ms，用读前时刻会白等
++                # 一个轮询周期；这不会让零点估计变早，只把已经到点的那一瞬认出来。
++                if cd.due(time.perf_counter(), 0.0):
+                     self._say("弹窗倒计时真归零了，开点", "hit")
+                     return True
+             elif seen:
+diff --git a/tools/soak.py b/tools/soak.py
+index 95cb95c..3fb94ec 100644
+--- a/tools/soak.py
++++ b/tools/soak.py
+@@ -738,7 +738,7 @@ class SoakEngine(eng_mod.Engine):
+     def _bought_dialog(self, screen):
+         return bool(CURRENT["st"].bought)
+ 
+-    def _guard_insufficient(self, screen, mouse, tries=3, gap=0.35):
++    def _guard_insufficient(self, screen, mouse, tries=3, gap=0.35, stop_on_bought=False):
+         return None
+ 
+     def _say(self, msg, level="info"):
+diff --git a/tests/test_engine_shot.py b/tests/test_engine_shot.py
+index 1bfcbf3..b5d1720 100644
+--- a/tests/test_engine_shot.py
++++ b/tests/test_engine_shot.py
+@@ -98,7 +98,7 @@ def eng():
+     e._target_hwnd = 1
+     e._log = deque()
+     e._say = lambda msg, level="info": e._log.append((level, msg))
+-    e._guard_insufficient = lambda screen, mouse, tries=3, gap=0.35: None
++    e._guard_insufficient = lambda screen, mouse, tries=3, gap=0.35, stop_on_bought=False: None
+     e._insufficient_showing = lambda screen: False
+     return e
+ 
+diff --git a/tests/test_records.py b/tests/test_records.py
+index 281e250..da2fc6d 100644
+--- a/tests/test_records.py
++++ b/tests/test_records.py
+@@ -114,7 +114,7 @@ def eng(rec, monkeypatch):
+     e._target_hwnd = 1
+     e._log = []
+     e._say = lambda msg, level="info": e._log.append((level, msg))
+-    e._guard_insufficient = lambda screen, mouse, tries=3, gap=0.35: None
++    e._guard_insufficient = lambda screen, mouse, tries=3, gap=0.35, stop_on_bought=False: None
+     e._insufficient_showing = lambda screen: False
+     return e
+ 
+diff --git a/tests/test_fix_d.py b/tests/test_fix_d.py
+index 8a856fd..85106f1 100644
+--- a/tests/test_fix_d.py
++++ b/tests/test_fix_d.py
+@@ -132,7 +132,8 @@ def test_buy_without_dialog_clicks_price_button(monkeypatch):
+     monkeypatch.setattr(Engine, "_chip_ready", lambda self, screen: True)
+     monkeypatch.setattr(Engine, "_bought_dialog", lambda self, screen: True)
+     monkeypatch.setattr(Engine, "_balance", lambda self, screen: None)
+-    monkeypatch.setattr(Engine, "_guard_insufficient", lambda self, *a: None)
++    monkeypatch.setattr(Engine, "_guard_insufficient",
++                        lambda self, *a, stop_on_bought=False: None)
+     monkeypatch.setattr(Engine, "_record", lambda self, *a, **k: None)
+     e = Engine()
+     mouse = _Mouse()

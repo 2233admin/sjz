@@ -738,7 +738,7 @@ class SoakEngine(eng_mod.Engine):
     def _bought_dialog(self, screen):
         return bool(CURRENT["st"].bought)
 
-    def _guard_insufficient(self, screen, mouse, tries=3, gap=0.35):
+    def _guard_insufficient(self, screen, mouse, tries=3, gap=0.35, stop_on_bought=False):
         return None
 
     def _say(self, msg, level="info"):

@@ -114,7 +114,7 @@ def eng(rec, monkeypatch):
     e._target_hwnd = 1
     e._log = []
     e._say = lambda msg, level="info": e._log.append((level, msg))
-    e._guard_insufficient = lambda screen, mouse, tries=3, gap=0.35: None
+    e._guard_insufficient = lambda screen, mouse, tries=3, gap=0.35, stop_on_bought=False: None
     e._insufficient_showing = lambda screen: False
     return e
 

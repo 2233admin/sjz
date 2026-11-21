@@ -132,7 +132,8 @@ def test_buy_without_dialog_clicks_price_button(monkeypatch):
     monkeypatch.setattr(Engine, "_chip_ready", lambda self, screen: True)
     monkeypatch.setattr(Engine, "_bought_dialog", lambda self, screen: True)
     monkeypatch.setattr(Engine, "_balance", lambda self, screen: None)
-    monkeypatch.setattr(Engine, "_guard_insufficient", lambda self, *a: None)
+    monkeypatch.setattr(Engine, "_guard_insufficient",
+                        lambda self, *a, stop_on_bought=False: None)
     monkeypatch.setattr(Engine, "_record", lambda self, *a, **k: None)
     e = Engine()
     mouse = _Mouse()

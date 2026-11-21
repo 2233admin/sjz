@@ -207,3 +207,41 @@ def test_fire_keeps_clicking_when_money_is_fine(eng, monkeypatch):
     # 精确值由 confirm_timeout_s / confirm_interval_ms 决定，属于配置。
     assert len(confirm) <= 120, f"确认点了 {len(confirm)} 下，兜底时长没生效"
 
+
+# ---------------- 成交后提前收手（不缩观测窗） ----------------
+
+def test_guard_exits_after_first_scan_when_reward_is_up(eng, monkeypatch):
+    """读到「跳过」= 这件确实买到了 → 不必再整屏扫第二次。"""
+    scans = []
+    monkeypatch.setattr(popup, "scan",
+                        lambda img: (scans.append(1), {"found": False})[1])
+    monkeypatch.setattr(eng, "_skip_visible", lambda screen: True)
+    eng._guard_insufficient(FakeScreen(None), FakeMouse(), stop_on_bought=True)
+    assert len(scans) == 1, f"扫了 {len(scans)} 次，成交后还在空转"
+
+
+def test_guard_keeps_all_three_scans_when_reward_absent(eng, monkeypatch):
+    """没读到「跳过」时观测窗一次都不能少 —— 这是漏判余额不足的红线。"""
+    scans = []
+    monkeypatch.setattr(popup, "scan",
+                        lambda img: (scans.append(1), {"found": False})[1])
+    monkeypatch.setattr(eng, "_skip_visible", lambda screen: False)
+    eng._guard_insufficient(FakeScreen(None), FakeMouse(), stop_on_bought=True)
+    assert len(scans) == 3, f"只扫了 {len(scans)} 次，观测窗被缩短了"
+
+
+def test_insufficient_popup_still_aborts_even_if_skip_is_visible(eng, monkeypatch):
+    """真查到余额不足就必须中止，不能被「跳过」探针掩盖。"""
+    monkeypatch.setattr(popup, "scan", lambda img: {
+        "found": True, "kind": "insufficient", "shortfall": None,
+        "recommend": 328, "buttons": None, "text": "三角币不足",
+    })
+    monkeypatch.setattr(eng, "_skip_visible", lambda screen: True)
+    with pytest.raises(engine_mod.Aborted):
+        eng._guard_insufficient(FakeScreen(None), FakeMouse(), stop_on_bought=True)
+
+
+def test_skip_probe_fails_open_when_screen_has_no_norm_to_px(eng):
+    """探针出任何问题都只能返回 False（继续原守卫），不能反过来放行。"""
+    assert eng._skip_visible(FakeScreen(None)) is False
+

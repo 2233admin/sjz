@@ -94,17 +94,21 @@ def _quiet(eng, monkeypatch, match):
 
 # ---------------------------------------------------------------- 解锁检测
 
-def test_unlock_waits_for_the_real_zero(monkeypatch):
-    """读到「0秒」**不能**立刻返回 —— 显示值是 floor，那一刻真实还剩 0~1 秒。
+def test_unlock_hands_off_at_displayed_zero(monkeypatch):
+    """连续两帧读到「0秒」就放行 —— 最后一秒交给确认连点循环覆盖。
 
-    以前读到 0 就返回，点下去游戏直接忽略：用户当场抓过「你抢早了」，
-    连续三单没抢到（2026-11-03）。现在按相位估计等到真正的零点
-    （零点 = 读到时 + 秒数 + 1），既不能早、也不能晚太多。
+    显示值是 floor：显示 0 的那一整秒真实剩 0~1 秒，之后不会再有跳秒，
+    继续轮询读不出任何新信息。旧实现死等满 1 秒上界；现在连续两帧读到 0
+    （单帧误读去抖，对抗复核 R1）就交给连点循环：归零前的点击游戏直接
+    忽略（2026-10-23 实测「毫无反应」），循环每点一下都复核弹窗、消失才
+    收手，真零点后的第一击最多晚一个 confirm_gap（confirm_timeout 2s
+    覆盖 1s 相位窗绰绰有余，配小了有覆盖门退回死等）。
+    「你抢早了」三连空（2026-11-03）的根因是旧流程点一下就当买到；
+    现在成交要过结算弹窗 + 余额两道校验，早点的白点不会误记成交。
     """
     eng = engine_mod.Engine()
     eng._say = lambda *a, **k: None
     shown_zero_at = 0.30          # 屏幕开始显示「0秒」
-    real_zero_at = shown_zero_at + 1.0   # 真正解锁（显示 0 的那一整秒）
     t0 = [None]
 
     def fake_clock(screen, px):
@@ -112,9 +116,7 @@ def test_unlock_waits_for_the_real_zero(monkeypatch):
         if t0[0] is None:
             t0[0] = now
         elapsed = now - t0[0]
-        left = real_zero_at - elapsed
-        # 屏幕显示的是 floor：真实剩 0.4 秒时显示「0秒」
-        text = "0秒" if left < 1.0 else "1秒"
+        text = "0秒" if elapsed >= shown_zero_at else "1秒"
         return [{"text": text, "x": 0, "y": 0}]
 
     monkeypatch.setattr(eng, "_ocr_clock", fake_clock)
@@ -122,12 +124,9 @@ def test_unlock_waits_for_the_real_zero(monkeypatch):
     assert eng._wait_dialog_unlock(_Screen()) is True
     elapsed = time.perf_counter() - t_start
 
-    # 不能早：早于真零点就是白点（游戏会忽略，那一下也就废了）
-    assert elapsed >= real_zero_at - 0.05, \
-        f"提前 {((real_zero_at - elapsed) * 1000):.0f}ms 就返回了 —— 这是「抢早了」"
-    # 也不能晚太多：真零点之后 150ms 内必须返回
-    late = elapsed - real_zero_at
-    assert late < 0.15, f"真归零后 {late * 1000:.0f}ms 才返回"
+    # 显示 0 的那一刻立即放行（误差 = 一次轮询间隔以内）
+    assert elapsed < shown_zero_at + 0.15, \
+        f"显示 0 后 {((elapsed - shown_zero_at) * 1000):.0f}ms 才放行 —— 应立即交给连点"
 
 
 # ---------------------------------------------------------------- 确认闭环

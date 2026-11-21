@@ -2593,6 +2593,20 @@ class Engine:
             return None
         return ocr.balance_from_words(words)
 
+    def _skip_visible(self, screen):
+        """窄带（100x55）里有没有结算弹窗的「跳过」—— 约 30ms，只作正向证据。
+
+        读不到、抓帧失败、OCR 报错一律返回 False（fail-open 到原来的整屏
+        守卫），绝不把「没读到」当成「没成交」或「没弹窗」。
+        """
+        try:
+            crop = screen.grab(screen.norm_to_px(SKIP_N))
+            if crop is None or not getattr(crop, "size", 0):
+                return False
+            return "跳过" in (ocr.read_text(upscale(crop, 2)) or "")
+        except Exception:                                # noqa: BLE001
+            return False
+
     def _insufficient_showing(self, screen):
         """屏幕上是不是「三角币不足」弹窗 —— 只 OCR 那一行，几毫秒。
 
@@ -3026,9 +3040,12 @@ class Engine:
         # 归零前点购买没有反应。只能等文本归零，详见 _wait_dialog_unlock。
         # 传模板进去：文本「提前消失」可能就是弹窗已经没了（被别人买走），
         # 那种情况不能再盲点确认（以前直接 return True 说解锁了）。
+        confirm_timeout = max(0.2, switches.read(
+            cfg, "confirm_timeout_s", 2.0, "float", 0.05, 600.0,
+            key="confirm_timeout_s"))
         unlocked = self._wait_dialog_unlock(
             screen, confirm_tpl=confirm_tpl, confirm_px=confirm_px,
-            threshold=threshold)
+            threshold=threshold, confirm_timeout=confirm_timeout)
         if unlocked == "gone":
             self._say("确认弹窗已经消失（多半被人先买走），这一件按没抢到记",
                       "warn")
@@ -3046,9 +3063,6 @@ class Engine:
         # 现在每点一下就看一眼确认弹窗还在不在：没了立刻收手。
         # 还开着就继续点，最多点到 confirm_timeout_s —— 覆盖「按钮比
         # 倒计时晚亮」的情况（这正是原来那个固定 sleep(0.6) 想解决的）。
-        confirm_timeout = max(0.2, switches.read(
-            cfg, "confirm_timeout_s", 2.0, "float", 0.05, 600.0,
-            key="confirm_timeout_s"))
         t_conf = time.perf_counter()
         # 证据探针的耗时单独累计：它不属于「抢购耗时」，不能算进 elapsed。
         self._probe_s = 0.0
@@ -3081,7 +3095,9 @@ class Engine:
         # ---- 查余额不足 ----
         # 点完确认的第一个可能结果是「钱不够」。这一步必须在报告"完成"之前，
         # 否则用户以为买到了，实际上什么都没买。
-        self._guard_insufficient(screen, mouse)
+        # 已经读到结算弹窗（「跳过」）就说明买到了，两种模态互斥：提前收手，
+        # 省掉后面的整屏 OCR，但没读到结算时行为与原来逐位相同。
+        self._guard_insufficient(screen, mouse, stop_on_bought=True)
 
         # ---- 校验「真的买到了」 ----
         # 点完确认 ≠ 买到了：别人先买走、余额不足、弹窗没响应，都会出现
@@ -3250,7 +3266,8 @@ class Engine:
         return False
 
     def _wait_dialog_unlock(self, screen, timeout=30.0, confirm_tpl=None,
-                            confirm_px=None, threshold=0.85):
+                            confirm_px=None, threshold=0.85,
+                            confirm_timeout=2.0):
         """等确认弹窗里的共享倒计时归零，再让调用方去点购买。
 
         真机实测（2026-10-23）：T-5s 点购买弹出的确认页和列表共享同一个
@@ -3268,16 +3285,29 @@ class Engine:
         不存在的弹窗盲点确认，还可能点穿到别的按钮上（审查 S13）。用字符串
         而不是 None：None 和「没返回」的桩函数撞车。只有传 confirm_tpl 才
         做这层复核，不传就保持老行为（直接调它的测试不抓屏）。
+
+        confirm_timeout 是调用方确认连点的兜底时长：小于 1.2s 盖不住显示 0
+        的 1 秒相位窗，此时退回原来的死等行为（读到 0 不提前放行）——宁可
+        慢，也不把「买到」变成「miss」（对抗复核 R2）。
         """
         px = screen.norm_to_px(CLOCK_N)
         t0 = time.perf_counter()
         seen = False
-        # **用跳秒相位估计判归零，不能看「读到 0」。**
+        zero_reads = 0
+        # **S≥1 用跳秒相位估计判归零，不能看「读到 S」。**
         # 显示值是 floor（见 countdown.observe 的注释）：读到「0分0秒」的
         # 那一刻真实剩余还有 0~1 秒，这一下点确认游戏直接忽略 —— 连续三次
-        # 没抢到、用户一眼看出「点太早了」就是这么来的。上次只加了 150ms
-        # 复核，远不够那 1 秒，所以还是早。
+        # 没抢到、用户一眼看出「点太早了」就是这么来的（2026-11-03）。
         # 估计公式：零点 = 读到 S 的时刻 + S + 1。
+        # 但显示 0 是 floor 模型的最后一段：之后不会再有跳秒，相位估计永远
+        # 停在「还有 0~1 秒」的整秒窗上，继续轮询读不出任何新信息，死等只能
+        # 等到最松的上界 t+S+1，最坏白等 1 秒。所以「连续两帧读到 0」就放行
+        # （单帧误读去抖，对抗复核 R1），把最后一秒交给调用方的确认连点循环：
+        # 归零前的点击游戏直接忽略（2026-10-23 实测「毫无反应」），循环每点
+        # 一下都复核弹窗、消失才收手（confirm_timeout 2s >> 1s 相位窗，配小了
+        # 由下面的覆盖门退回死等），真零点后的第一击最多晚一个 confirm_gap。
+        # 当年事故的根因是「点一下就当买到」；现在成交另有结算弹窗 + 余额
+        # 双重校验，早点的白点不会漏买也不会误记成交 —— 死等被连点换掉了。
         cd = countdown.Clock()
         # 轮询间隔按实测的读表成本自适应：读一次 240x65 的倒计时约 25ms
         # （截屏 2ms + 放大 + 一次 OCR）。以前写死 250ms，等于「解锁了还要
@@ -3293,7 +3323,37 @@ class Engine:
             if sec is not None:
                 seen = True
                 cd.observe(sec, now)
-                if cd.due(now, 0.0):
+                if sec == 0:
+                    zero_reads += 1
+                else:
+                    zero_reads = 0
+                # 显示 0 = 相位窗无法再细化（见函数头注释），交给确认连点。
+                # 两道门（对抗复核 R1/R2）：
+                # ① 去抖：单帧 OCR 误读成 0 不能信 —— 显示 0 的相位窗有一
+                #    整秒长，连读两帧再放行只多花一个轮询周期；第二帧读回
+                #    真实秒数时 Clock 的变大复位会接手。
+                # ② 覆盖门：连点兜底 confirm_timeout 至少要盖住 1 秒相位窗
+                #    （≥1.2s），配小了退回死等，宁可慢也不把买到变 miss。
+                # 与「文本消失」分支同一道模板闸：显示 0 但按钮模板已匹配
+                # 不上，说明弹窗早没了，不能对着空屏幕开连点（点穿到别的
+                # 东西上）。
+                if (sec == 0 and zero_reads >= 2
+                        and confirm_timeout >= 1.2):
+                    if confirm_tpl is not None and confirm_px is not None:
+                        try:
+                            cscore, _ = match(to_gray(screen.grab(confirm_px)),
+                                              confirm_tpl)
+                        except Exception:            # noqa: BLE001
+                            cscore = 0.0
+                        if cscore < threshold:
+                            self._say(f"显示 0 但确认按钮已不在（相关度 "
+                                      f"{cscore:.3f}），判定弹窗已消失", "warn")
+                            return "gone"
+                    self._say("弹窗倒计时显示 0，交给确认连点覆盖最后一秒", "hit")
+                    return True
+                # 用「读完之后」的时刻判到点：读表要 ~80ms，用读前时刻会白等
+                # 一个轮询周期；这不会让零点估计变早，只把已经到点的那一瞬认出来。
+                if cd.due(time.perf_counter(), 0.0):
                     self._say("弹窗倒计时真归零了，开点", "hit")
                     return True
             elif seen:
@@ -3769,7 +3829,8 @@ class Engine:
             except Exception:               # noqa: BLE001
                 pass
 
-    def _guard_insufficient(self, screen, mouse, tries=3, gap=0.35):
+    def _guard_insufficient(self, screen, mouse, tries=3, gap=0.35,
+                            stop_on_bought=False):
         """点完确认后查「三角币不足」弹窗。命中就点「取消」并中止整场。
 
         为什么命中要中止而不是换下一条：余额不足是账户级问题，换哪件商品
@@ -3777,6 +3838,12 @@ class Engine:
 
         为什么点「取消」而不是直接停：弹窗是模态的，不关掉它，后面所有
         点击都会落在弹窗上 —— 包括可能落在「充值」上。
+
+        stop_on_bought：每次整屏扫描「没查到不足」之后，先花约 30ms 读窄带
+        「跳过」。读到说明结算弹窗已经出来、这一件确实买到了 —— 成交与
+        「余额不足」是互斥的两个模态，此时再花整屏 OCR 查不足没有意义，
+        直接结束守卫。**没读到就照旧整屏扫描，观测窗与重试次数一个都不减**，
+        所以不会漏判；只有最后一拍不加探针（后面没有扫描可省）。
         """
         for i in range(tries):
             if self._stop.is_set():
@@ -3785,6 +3852,11 @@ class Engine:
                 time.sleep(gap)
             result = popup.scan(screen.grab())
             if not result["found"]:
+                if (stop_on_bought and i < tries - 1
+                        and self._skip_visible(screen)):
+                    self._say("结算弹窗已出现（跳过可见），余额不足不成立，"
+                              "守卫提前结束", "info")
+                    return
                 continue
 
             msg = popup.describe(result)

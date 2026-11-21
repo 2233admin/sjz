@@ -58,12 +58,18 @@ def _engine():
 
 # ---------------- 等弹窗共享倒计时归零 ----------------
 
-def test_dialog_unlock_waits_for_the_text_to_hit_zero(monkeypatch):
-    """前四帧都还有 4 秒 —— 一下都不能早，更不能第一帧就当解锁。
+def test_dialog_unlock_hands_over_to_confirm_storm_at_zero(monkeypatch):
+    """连续两帧读到 0 就放行，把最后一秒交给确认连点循环覆盖。
 
-    而且**读到 0 之后还要等**：显示值是 floor，那一整秒里真实还剩 0~1 秒。
-    用户当场抓到的「你点早了」就是旧实现读到 0 立刻点 —— 游戏直接忽略，
-    连续三单没抢到（2026-11-03）。现在按相位估计等到真正的零点。
+    显示 0 是 floor 模型的最后一段：之后不会再有跳秒，相位估计停在
+    「还有 0~1 秒」的整秒窗上，继续轮询读不出新信息，死等只能等到最松的
+    上界（最坏白等 1 秒）。2026-11-03 的「点早了」事故是旧流程「点一下
+    就当买到」；现在的确认连点循环每点一下都复核弹窗、消失才收手
+    （confirm_timeout 2s >> 1s 相位窗），归零前的点击被游戏忽略
+    （2026-10-23 实测「毫无反应」），真零点后的第一击最多晚一个
+    confirm_gap —— 死等被连点换掉，成交另有结算弹窗 + 余额双校验兜底。
+    连读两帧才放行是单帧误读去抖（对抗复核 R1）：显示 0 的相位窗有一
+    整秒长，多等一帧轮询不亏；第二帧读回真实秒数时 Clock 复位接手。
     """
     e, _said = _engine()
     calls = {"n": 0}
@@ -73,14 +79,60 @@ def test_dialog_unlock_waits_for_the_text_to_hit_zero(monkeypatch):
         return _cd_words(4 if calls["n"] < 5 else 0)
 
     monkeypatch.setattr(e, "_ocr_clock", fake_clock)
+    monkeypatch.setattr(engine_mod.time, "sleep", lambda s: None)
 
     t0 = time.perf_counter()
     assert e._wait_dialog_unlock(FakeScreen(), timeout=5.0) is True
     elapsed = time.perf_counter() - t0
 
-    assert calls["n"] > 5, "读到 0 之后还应该继续读，不能立刻放行"
-    # 读到 0 的那一刻算零点在 1 秒后，所以至少要等这么久
-    assert elapsed >= 0.9, f"读到 0 后 {elapsed:.2f}s 就放行了 —— 这是「点早了」"
+    assert calls["n"] == 6, "连续两帧读到 0 就该放行（单帧误读去抖），之后是确认连点的事"
+    assert elapsed < 0.5, f"显示 0 还干等 {elapsed:.2f}s —— 应立即交给连点覆盖"
+
+
+def test_dialog_unlock_at_zero_with_dialog_gone_reports_gone(monkeypatch):
+    """显示 0 但确认按钮模板已匹配不上 = 弹窗不在了，不能对着空屏幕开连点。"""
+    e, said = _engine()
+    monkeypatch.setattr(e, "_ocr_clock", lambda scr, px: _cd_words(0))
+    monkeypatch.setattr(engine_mod, "match", lambda *a, **k: (0.1, (0, 0)))
+    monkeypatch.setattr(engine_mod.time, "sleep", lambda s: None)
+
+    assert e._wait_dialog_unlock(FakeScreen(), timeout=5.0,
+                                 confirm_tpl="t", confirm_px=(0, 0, 10, 10)
+                                 ) == "gone"
+    assert any("已消失" in msg for _lv, msg in said)
+
+
+def test_dialog_unlock_at_zero_with_dialog_present_starts_storm(monkeypatch):
+    """显示 0 且确认按钮还在：立即放行去开连点，不多等一帧。"""
+    e, _said = _engine()
+    monkeypatch.setattr(e, "_ocr_clock", lambda scr, px: _cd_words(0))
+    monkeypatch.setattr(engine_mod, "match", lambda *a, **k: (0.95, (0, 0)))
+    monkeypatch.setattr(engine_mod.time, "sleep", lambda s: None)
+
+    assert e._wait_dialog_unlock(FakeScreen(), timeout=5.0,
+                                 confirm_tpl="t", confirm_px=(0, 0, 10, 10)
+                                 ) is True
+
+
+def test_dialog_unlock_falls_back_to_dead_wait_when_timeout_too_small(monkeypatch):
+    """confirm_timeout < 1.2s 盖不住 1s 相位窗：退回死等，不提前放行（R2 覆盖门）。
+
+    连点兜底配小了，早放行会把「买到」变成「miss」—— 确认循环超时收手
+    时真零点还没到。宁可慢，也不丢这单。
+    """
+    e, _said = _engine()
+    calls = {"n": 0}
+
+    def fake_clock(scr, px):
+        calls["n"] += 1
+        return _cd_words(0)
+
+    monkeypatch.setattr(e, "_ocr_clock", fake_clock)
+    monkeypatch.setattr(engine_mod.time, "sleep", lambda s: None)
+
+    assert e._wait_dialog_unlock(FakeScreen(), timeout=0.3,
+                                 confirm_timeout=1.0) is False
+    assert calls["n"] > 2, "覆盖门生效：不该在头两帧就放行"
 
 
 def test_dialog_unlock_accepts_the_text_vanishing_after_being_seen(monkeypatch):

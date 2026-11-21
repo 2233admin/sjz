@@ -320,6 +320,14 @@ class Scene(object):
         self.lose = (mode == "lost")  # 点了确认但什么都没拿到（别人先买走）
         self.in_close = False         # 正在走 _close_reward（区分「购买点」与「跳过」）
         self.t_confirm_click = None
+        self.reward_at = None         # 奖励弹窗真正可读的虚拟时刻（None=立即）
+
+    def tick(self):
+        """到点把「奖励弹窗」翻成可见（结算弹窗有渲染延迟）。"""
+        if self.reward_at is not None and self.vc.t >= self.reward_at:
+            self.reward = True
+            self.showcase = True
+            self.reward_at = None
 
     def kind_of(self, px):
         if px is None:
@@ -363,8 +371,11 @@ class Scene(object):
             if y < 800:                             # 点的是确认框里的「确认」
                 self.confirm_open = False           # 弹窗立刻消失
                 self.confirmed = True               # 之后不再出现
-                self.reward = not self.lose         # 换成奖励弹窗
-                self.showcase = not self.lose       # 展示页同时在
+                # 结算弹窗不是同一帧画出来：真机「通常几十毫秒」，台架取
+                # 保守上界 200ms（与 confirm_delay 一致）。lost 永远不出现。
+                self.reward = False
+                self.reward_at = (None if self.lose else self.vc.t + 0.20)
+                self.showcase = False
                 self.t_confirm_click = self.vc.t
         elif self.phase == "close":
             if y > 900 and x > 1400:
@@ -413,6 +424,7 @@ def make_shims(vc, scene, screen):
             return "bench-scripted"
 
         def read_words(self, img, **kw):
+            scene.tick()      # 结算弹窗的渲染延迟按虚拟时钟兑现
             kind = getattr(img, "kind", "full")
             self.calls.append(kind)
             if kind in ("list", "full"):
@@ -459,6 +471,11 @@ def make_shims(vc, scene, screen):
         # _balance 里会回读 ocr.last_number()（上一次数字识别的原始读数）
         def last_number(self, *a, **k):
             return "1204"
+
+        # 2026-11-08 起 _balance 改走词框解析 ocr.balance_from_words；
+        # 台架返回脚本里固定不变的余额（前后相同 → 余额判据不触发）。
+        def balance_from_words(self, words, **kw):
+            return 1204
 
     SCENE_TEXT = {
         "clock": [{"text": "05", "x": 0}, {"text": "秒后解锁购买", "x": 40}],

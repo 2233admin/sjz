@@ -1,0 +1,170 @@
+﻿diff --git a/core/engine.py b/core/engine.py
+index 291aaae..f0941e9 100644
+--- a/core/engine.py
++++ b/core/engine.py
+@@ -2593,6 +2593,20 @@ class Engine:
+             return None
+         return ocr.balance_from_words(words)
+ 
++    def _skip_visible(self, screen):
++        """窄带（100x55）里有没有结算弹窗的「跳过」—— 约 30ms，只作正向证据。
++
++        读不到、抓帧失败、OCR 报错一律返回 False（fail-open 到原来的整屏
++        守卫），绝不把「没读到」当成「没成交」或「没弹窗」。
++        """
++        try:
++            crop = screen.grab(screen.norm_to_px(SKIP_N))
++            if crop is None or not getattr(crop, "size", 0):
++                return False
++            return "跳过" in (ocr.read_text(upscale(crop, 2)) or "")
++        except Exception:                                # noqa: BLE001
++            return False
++
+     def _insufficient_showing(self, screen):
+         """屏幕上是不是「三角币不足」弹窗 —— 只 OCR 那一行，几毫秒。
+ 
+@@ -3081,7 +3095,9 @@ class Engine:
+         # ---- 查余额不足 ----
+         # 点完确认的第一个可能结果是「钱不够」。这一步必须在报告"完成"之前，
+         # 否则用户以为买到了，实际上什么都没买。
+-        self._guard_insufficient(screen, mouse)
++        # 已经读到结算弹窗（「跳过」）就说明买到了，两种模态互斥：提前收手，
++        # 省掉后面的整屏 OCR，但没读到结算时行为与原来逐位相同。
++        self._guard_insufficient(screen, mouse, stop_on_bought=True)
+ 
+         # ---- 校验「真的买到了」 ----
+         # 点完确认 ≠ 买到了：别人先买走、余额不足、弹窗没响应，都会出现
+@@ -3769,7 +3785,8 @@ class Engine:
+             except Exception:               # noqa: BLE001
+                 pass
+ 
+-    def _guard_insufficient(self, screen, mouse, tries=3, gap=0.35):
++    def _guard_insufficient(self, screen, mouse, tries=3, gap=0.35,
++                            stop_on_bought=False):
+         """点完确认后查「三角币不足」弹窗。命中就点「取消」并中止整场。
+ 
+         为什么命中要中止而不是换下一条：余额不足是账户级问题，换哪件商品
+@@ -3777,6 +3794,12 @@ class Engine:
+ 
+         为什么点「取消」而不是直接停：弹窗是模态的，不关掉它，后面所有
+         点击都会落在弹窗上 —— 包括可能落在「充值」上。
++
++        stop_on_bought：每次整屏扫描「没查到不足」之后，先花约 30ms 读窄带
++        「跳过」。读到说明结算弹窗已经出来、这一件确实买到了 —— 成交与
++        「余额不足」是互斥的两个模态，此时再花整屏 OCR 查不足没有意义，
++        直接结束守卫。**没读到就照旧整屏扫描，观测窗与重试次数一个都不减**，
++        所以不会漏判；只有最后一拍不加探针（后面没有扫描可省）。
+         """
+         for i in range(tries):
+             if self._stop.is_set():
+@@ -3785,6 +3808,11 @@ class Engine:
+                 time.sleep(gap)
+             result = popup.scan(screen.grab())
+             if not result["found"]:
++                if (stop_on_bought and i < tries - 1
++                        and self._skip_visible(screen)):
++                    self._say("结算弹窗已出现（跳过可见），余额不足不成立，"
++                              "守卫提前结束", "info")
++                    return
+                 continue
+ 
+             msg = popup.describe(result)
+diff --git a/perf/bench/flow_bench.py b/perf/bench/flow_bench.py
+index cba8ecf..be4f6b5 100644
+--- a/perf/bench/flow_bench.py
++++ b/perf/bench/flow_bench.py
+@@ -320,6 +320,14 @@ class Scene(object):
+         self.lose = (mode == "lost")  # 点了确认但什么都没拿到（别人先买走）
+         self.in_close = False         # 正在走 _close_reward（区分「购买点」与「跳过」）
+         self.t_confirm_click = None
++        self.reward_at = None         # 奖励弹窗真正可读的虚拟时刻（None=立即）
++
++    def tick(self):
++        """到点把「奖励弹窗」翻成可见（结算弹窗有渲染延迟）。"""
++        if self.reward_at is not None and self.vc.t >= self.reward_at:
++            self.reward = True
++            self.showcase = True
++            self.reward_at = None
+ 
+     def kind_of(self, px):
+         if px is None:
+@@ -363,8 +371,11 @@ class Scene(object):
+             if y < 800:                             # 点的是确认框里的「确认」
+                 self.confirm_open = False           # 弹窗立刻消失
+                 self.confirmed = True               # 之后不再出现
+-                self.reward = not self.lose         # 换成奖励弹窗
+-                self.showcase = not self.lose       # 展示页同时在
++                # 结算弹窗不是同一帧画出来：真机「通常几十毫秒」，台架取
++                # 保守上界 200ms（与 confirm_delay 一致）。lost 永远不出现。
++                self.reward = False
++                self.reward_at = (None if self.lose else self.vc.t + 0.20)
++                self.showcase = False
+                 self.t_confirm_click = self.vc.t
+         elif self.phase == "close":
+             if y > 900 and x > 1400:
+@@ -413,6 +424,7 @@ def make_shims(vc, scene, screen):
+             return "bench-scripted"
+ 
+         def read_words(self, img, **kw):
++            scene.tick()      # 结算弹窗的渲染延迟按虚拟时钟兑现
+             kind = getattr(img, "kind", "full")
+             self.calls.append(kind)
+             if kind in ("list", "full"):
+@@ -460,6 +472,11 @@ def make_shims(vc, scene, screen):
+         def last_number(self, *a, **k):
+             return "1204"
+ 
++        # 2026-11-08 起 _balance 改走词框解析 ocr.balance_from_words；
++        # 台架返回脚本里固定不变的余额（前后相同 → 余额判据不触发）。
++        def balance_from_words(self, words, **kw):
++            return 1204
++
+     SCENE_TEXT = {
+         "clock": [{"text": "05", "x": 0}, {"text": "秒后解锁购买", "x": 40}],
+         "balance": [{"text": "1,204", "x": 0}],
+diff --git a/tests/test_engine_insufficient.py b/tests/test_engine_insufficient.py
+index 5f674ce..bb83450 100644
+--- a/tests/test_engine_insufficient.py
++++ b/tests/test_engine_insufficient.py
+@@ -207,3 +207,41 @@ def test_fire_keeps_clicking_when_money_is_fine(eng, monkeypatch):
+     # 精确值由 confirm_timeout_s / confirm_interval_ms 决定，属于配置。
+     assert len(confirm) <= 120, f"确认点了 {len(confirm)} 下，兜底时长没生效"
+ 
++
++# ---------------- 成交后提前收手（不缩观测窗） ----------------
++
++def test_guard_exits_after_first_scan_when_reward_is_up(eng, monkeypatch):
++    """读到「跳过」= 这件确实买到了 → 不必再整屏扫第二次。"""
++    scans = []
++    monkeypatch.setattr(popup, "scan",
++                        lambda img: (scans.append(1), {"found": False})[1])
++    monkeypatch.setattr(eng, "_skip_visible", lambda screen: True)
++    eng._guard_insufficient(FakeScreen(None), FakeMouse(), stop_on_bought=True)
++    assert len(scans) == 1, f"扫了 {len(scans)} 次，成交后还在空转"
++
++
++def test_guard_keeps_all_three_scans_when_reward_absent(eng, monkeypatch):
++    """没读到「跳过」时观测窗一次都不能少 —— 这是漏判余额不足的红线。"""
++    scans = []
++    monkeypatch.setattr(popup, "scan",
++                        lambda img: (scans.append(1), {"found": False})[1])
++    monkeypatch.setattr(eng, "_skip_visible", lambda screen: False)
++    eng._guard_insufficient(FakeScreen(None), FakeMouse(), stop_on_bought=True)
++    assert len(scans) == 3, f"只扫了 {len(scans)} 次，观测窗被缩短了"
++
++
++def test_insufficient_popup_still_aborts_even_if_skip_is_visible(eng, monkeypatch):
++    """真查到余额不足就必须中止，不能被「跳过」探针掩盖。"""
++    monkeypatch.setattr(popup, "scan", lambda img: {
++        "found": True, "kind": "insufficient", "shortfall": None,
++        "recommend": 328, "buttons": None, "text": "三角币不足",
++    })
++    monkeypatch.setattr(eng, "_skip_visible", lambda screen: True)
++    with pytest.raises(engine_mod.Aborted):
++        eng._guard_insufficient(FakeScreen(None), FakeMouse(), stop_on_bought=True)
++
++
++def test_skip_probe_fails_open_when_screen_has_no_norm_to_px(eng):
++    """探针出任何问题都只能返回 False（继续原守卫），不能反过来放行。"""
++    assert eng._skip_visible(FakeScreen(None)) is False
++
