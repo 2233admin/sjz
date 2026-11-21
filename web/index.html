@@ -1132,6 +1132,46 @@
   #panelTaskSet .pair input{padding:6px 5px !important}
   #panelTaskSet .pair .unit{font-size:10px;padding:0}
   #panelTaskSet .set-form > .set-sum{box-shadow:0 8px 8px -4px #0b0c0b}
+
+  /* ---------- 机械教动效：齿轮、斜纹流动、分区逐条展开、认知机打字摘要、铆钉微光 ---------- */
+  @keyframes mcCog{to{transform:rotate(360deg)}}
+  @keyframes mcStripe{to{background-position:24px 0}}
+  @keyframes mcOpen{from{opacity:0;transform:translateX(-16px);clip-path:inset(0 100% 0 0)}to{opacity:1;transform:none;clip-path:inset(0 0 0 0)}}
+  @keyframes mcType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  @keyframes mcGlint{0%,70%{background-position:-60px 0}100%{background-position:60px 0}}
+  @keyframes mcSave{0%,100%{filter:drop-shadow(0 0 0 rgba(15,247,150,0))}50%{filter:drop-shadow(0 0 8px rgba(15,247,150,.85))}}
+  @keyframes mcEye{0%,100%{box-shadow:0 0 4px var(--blood)}50%{box-shadow:0 0 12px 2px var(--blood)}}
+  /* 面板标题前的菱形换成缓慢旋转的齿轮感：外圈齿 + 转动 */
+  .panel-head::before{width:9px !important;height:9px !important;left:4px !important;border-radius:50%;background:
+      conic-gradient(var(--brass-2) 0 12.5%,transparent 0 25%,var(--brass-2) 0 37.5%,transparent 0 50%,var(--brass-2) 0 62.5%,transparent 0 75%,var(--brass-2) 0 87.5%,transparent 0) !important;
+    -webkit-mask:radial-gradient(circle,transparent 0 1.8px,#000 2px);mask:radial-gradient(circle,transparent 0 1.8px,#000 2px);
+    box-shadow:none !important;animation:mcCog 9s linear infinite !important;transform:translateY(-50%)}
+  .panel-head::after{animation:mcEye 2.4s ease-in-out infinite !important}
+  /* 斜纹缓慢流动 */
+  #panelTaskSet .set-grp::after{background-size:12px 6px;animation:mcStripe 1.6s linear infinite}
+  #panelTaskSet .panel-foot::before{background-size:24px 4px;animation:mcStripe 2.2s linear infinite}
+  /* 选中任务后：摘要卡打字出现，分区与字段逐条展开 */
+  #panelTaskSet .set-form.kick > .set-sum{animation:mcType .7s steps(28,end) both}
+  #panelTaskSet .set-form.kick > *{animation:mcOpen .38s cubic-bezier(.2,.8,.2,1) both}
+  #panelTaskSet .set-form.kick > .set-sum{animation:mcType .7s steps(28,end) both}
+  #panelTaskSet .set-form.kick > :nth-child(2){animation-delay:.08s}
+  #panelTaskSet .set-form.kick > :nth-child(3){animation-delay:.14s}
+  #panelTaskSet .set-form.kick > :nth-child(4){animation-delay:.2s}
+  #panelTaskSet .set-form.kick > :nth-child(5){animation-delay:.26s}
+  #panelTaskSet .set-form.kick > :nth-child(6){animation-delay:.32s}
+  #panelTaskSet .set-form.kick > :nth-child(7){animation-delay:.38s}
+  #panelTaskSet .set-form.kick > :nth-child(8){animation-delay:.44s}
+  #panelTaskSet .set-form.kick > :nth-child(n+9){animation-delay:.5s}
+  /* 罗马数字徽章扫光 */
+  #panelTaskSet .set-grp::before{background-image:linear-gradient(100deg,transparent 30%,rgba(255,235,180,.55) 50%,transparent 70%);background-size:60px 100%;background-repeat:no-repeat;animation:mcGlint 3.6s ease-in-out infinite}
+  /* 保存按钮可点时呼吸发光，提醒有未保存改动 */
+  #btnTaskSave:not(:disabled){animation:mcSave 1.8s ease-in-out infinite}
+  /* 面板进场：边框先描出来再显内容 */
+  .panel{animation:mcPanel .5s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes mcPanel{from{opacity:0;clip-path:inset(0 0 100% 0)}to{opacity:1;clip-path:inset(0 0 0 0)}}
+  /* 导航与行悬停：黄铜滑条 */
+  .tabs button,.side-tabs button{transition:color .2s,text-shadow .2s}
+  .body-row{transition:background .18s,box-shadow .18s}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
@@ -6000,6 +6040,23 @@ document.addEventListener('click', e => {
     });
   }
   requestAnimationFrame(frame);
+})();
+
+/* 选中/切换任务时重放设置栏的展开动画 */
+function kickForm() {
+  const f = document.getElementById('setForm');
+  if (!f) return;
+  f.classList.remove('kick'); void f.offsetWidth; f.classList.add('kick');
+}
+(function () {
+  const orig = window.renderTaskForm || (typeof renderTaskForm === 'function' ? renderTaskForm : null);
+  if (!orig) return;
+  let lastSel = null;
+  window.renderTaskForm = function () {
+    const r = orig.apply(this, arguments);
+    if (S.sel !== lastSel) { lastSel = S.sel; kickForm(); }
+    return r;
+  };
 })();
 </script>
 <!-- CLICK-BURST-NOTICE END -->
