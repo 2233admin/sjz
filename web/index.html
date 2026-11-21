@@ -2870,7 +2870,7 @@ async function handleStart() {
   }
   if (!r || r.ok === false) { await startFailed(new Error((r && r.msg) || '启动没有成功')); return; }
   clearException();
-  { const n = (S.tasks || []).filter(t => t.enabled !== false && !['done', 'failed', 'skipped'].includes(t.status)).length; toast(n ? `已开始抢购，队列里 ${n} 条任务` : '已开始抢购', 'ok'); }
+  { const n = (S.tasks || []).filter(t => !isBlankTask(t) && t.enabled !== false && !['done', 'failed', 'skipped'].includes(t.status)).length; toast(n ? `已开始抢购，队列里 ${n} 条任务` : '已开始抢购', 'ok'); }
   setGlobal('ok', '已开始抢购', '', '运行中');
   poll();
 }
@@ -3005,7 +3005,7 @@ async function loadTasks(quiet) {
     taskMode = 'ok'; taskErr = '';
     if (r.config_ok === false) taskErr = r.config_error || '设置文件读不出来';
     if (S.taskRetry) { clearTimeout(S.taskRetry); S.taskRetry = 0; }
-    if (!S.sel && S.tasks.length) S.sel = S.tasks[0].id;
+    if (!S.sel && realTasks().length) S.sel = realTasks()[0].id;
     renderTaskTable(true);
     fillFilters();
     renderTaskForm();
@@ -3020,9 +3020,13 @@ async function loadTasks(quiet) {
   }
 }
 
+/* 没名字也没关键词的空任务不占位：既不是目标，也没法抢 */
+function isBlankTask(t) { return !t.name && !taskKw(t).length && t.status !== 'running'; }
+function realTasks() { return (S.tasks || []).filter(t => !isBlankTask(t)); }
 function visibleTasks() {
   const q = taskFilter.q.trim().toLowerCase();
   return (S.tasks || []).filter(t => {
+    if (isBlankTask(t)) return false;
     if (q && !(String(t.name || '').toLowerCase().includes(q) || String(t.keywords || '').toLowerCase().includes(q))) return false;
     if (taskFilter.season && String(t.season || '') !== taskFilter.season) return false;
     if (taskFilter.type && !String(t.name || '').includes(taskFilter.type)) return false;
@@ -3087,7 +3091,7 @@ function renderTaskTable(force) {
   const focused = document.activeElement && wrap.contains(document.activeElement)
     ? (document.activeElement.dataset.id || '') : '';
   $('#taskCount').textContent = String(rows.length);
-  $('#taskSub').textContent = S.tasks ? `共 ${S.tasks.length} 条任务` : '正在读取任务';
+  $('#taskSub').textContent = S.tasks ? `共 ${realTasks().length} 条任务` : '正在读取任务';
   updateBulkScope();
   if (taskMode === 'loading') {
     wrap.innerHTML = Array.from({ length: 4 }).map(() => `<tr class="body-row"><td><span class="skel" style="width:12px"></span></td><td><span class="skel" style="width:12px"></span></td><td><span class="skel" style="width:120px"></span></td><td><span class="skel" style="width:54px"></span></td><td><span class="skel" style="width:60px"></span></td><td><span class="skel" style="width:20px"></span></td><td><span class="skel" style="width:34px"></span></td><td><span class="skel" style="width:40px"></span></td></tr>`).join('');
@@ -3102,7 +3106,7 @@ function renderTaskTable(force) {
     </div></td></tr>`;
     return;
   }
-  if (!S.tasks || !S.tasks.length) {
+  if (!S.tasks || !realTasks().length) {
     wrap.innerHTML = `<tr><td colspan="8"><div class="table-state">
       <div class="ts-ico"><svg viewBox="0 0 16 16"><path d="M3 3.4h10v9.2H3z"/><path d="M8 6v4M6 8h4"/></svg></div>
       <div class="ts-title">还没有抢购目标</div>
@@ -3906,7 +3910,7 @@ function paintStats() {
 }
 
 function paintProg() {
-  const ts = S.tasks || [];
+  const ts = (S.tasks || []).filter(t => !isBlankTask(t));
   const done = ts.filter(t => ['done', 'failed', 'skipped'].includes(t.status)).length;
   $('#topProg').textContent = `${done}/${ts.length}`;
   $('#sbTasks').textContent = String(ts.length);
@@ -3915,7 +3919,7 @@ function paintProg() {
 function paintTop(st) {
   st = st || S.status || {};
   const running = !!st.running;
-  const ts = st.tasks || S.tasks || [];
+  const ts = (st.tasks || S.tasks || []).filter(t => !isBlankTask(t));
   if (Array.isArray(st.tasks)) S.tasks = st.tasks;
   const done = ts.filter(t => ['done', 'failed', 'skipped'].includes(t.status)).length;
   $('#topProg').textContent = `${done}/${ts.length}`;
@@ -3974,7 +3978,7 @@ function paintStatusBand(st) {
     gprog(ts.length ? done / ts.length : 0);
     return;
   }
-  const ts = st.tasks || S.tasks || [];
+  const ts = (st.tasks || S.tasks || []).filter(t => !isBlankTask(t));
   const onN = ts.filter(t => t.enabled).length;
   setGlobal('ok', '待命，等你开始', ts.length ? `共 ${ts.length} 条任务，${onN} 条已启用` : '还没有任务，先添加一个目标', '待命');
   gprog(0);
@@ -5632,7 +5636,7 @@ async function rpSave() {
 function guideState() {
   const page = (S.status && S.status.page) || {};
   const known = !!(page.page && page.page !== 'unknown');
-  const hasTasks = !!(S.tasks && S.tasks.length);
+  const hasTasks = !!(S.tasks && realTasks().length);
   const pf = S.preflight;
   const tAuto = (S.timesync && S.timesync.auto) || ((S.status && S.status.clock && S.status.clock.auto) || {});
   const tCal = typeof tAuto.calibrated === 'boolean' ? tAuto.calibrated : clockCalibrated();
