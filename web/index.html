@@ -710,6 +710,39 @@
   body.compact .setsec.expanded > .setsec-body{padding-top:2px}
 
   /* ---------- 响应式 ---------- */
+  /* ---------- 去装饰：靠字体、发丝线和留白，不靠盒子/图标/药丸 ---------- */
+  :root{--r-xs:0;--r-sm:0;--r-md:0;--r-lg:0}
+  .panel{background:transparent;border:0;border-top:1px solid var(--line-3);border-radius:0}
+  .panel-head{border-bottom:1px solid var(--line);padding-left:2px;padding-right:2px}
+  .panel-head h2{font-size:12px;font-weight:600;letter-spacing:.1em}
+  .statcards{gap:0;border-top:1px solid var(--line-3);border-bottom:1px solid var(--line)}
+  .scard{background:transparent;border:0;border-left:1px solid var(--line);padding:9px 14px}
+  .scard:first-child{border-left:0;padding-left:2px}
+  .scard:hover{border-color:var(--line)}
+  .scard .sc-ico{display:none}
+  .scard .sc-dot{border-radius:0;width:5px;height:5px}
+  .tag,.tag.s,.tag.a{background:none;padding:0;height:auto;border-radius:0}
+  .tabs{background:none;border:0;padding:0;gap:2px}
+  .tabs button{border-radius:0}
+  .tabs button.on{background:none;box-shadow:none;border-bottom:2px solid var(--accent);color:#fff}
+  .set-sum{border-left:0;background:none;padding:0 0 8px;border-bottom:1px solid var(--line);color:var(--text)}
+  .set-grp span{display:none}
+  .set-grp{letter-spacing:.1em;color:var(--text-2)}
+  .chips{gap:2px 14px}
+  .chip{border:0;padding:0;background:none;color:var(--text-3);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+  .chip:hover{color:var(--text)}
+  .set-form input:not([type=checkbox]):not([type=radio]),.set-form select,.taskbar input,.taskbar select{
+    background:transparent;border:0;border-bottom:1px solid var(--line-3);border-radius:0;padding-left:0}
+  #panelTaskSet .panel-foot{background:var(--bg)}
+  .body-row.sel{background:rgba(255,255,255,.03)}
+  @media (max-width:1240px){
+    .scard:nth-child(odd){border-left:0;padding-left:2px}
+    .scard:nth-child(n+3){border-top:1px solid var(--line)}
+  }
+  @media (max-width:560px){
+    .scard{border-left:0;padding-left:2px}
+    .scard + .scard{border-top:1px solid var(--line)}
+  }
   @media (max-width:1560px){
     .brand-t em{display:none}
     .plan{flex-basis:190px}
