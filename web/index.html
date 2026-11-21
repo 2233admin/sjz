@@ -334,6 +334,15 @@
   .set-form{display:grid;grid-template-columns:1fr 1fr;gap:9px}
   .set-form .span2{grid-column:span 2}
   .set-form .fld input,.set-form .fld select{padding:5px 8px;font-size:11.5px}
+  .set-sum{font-size:11.5px;line-height:1.6;padding:7px 9px;border-left:2px solid var(--accent,#d9a441);background:#171615;color:var(--text-2,#c9c6bd);min-height:1.6em}
+  .set-sum b{color:var(--text-1,#ece9e0);font-weight:600}
+  .set-sum.off{border-left-color:var(--line);color:var(--text-3)}
+  .set-grp{display:flex;align-items:baseline;gap:7px;font-size:10.5px;letter-spacing:.14em;color:var(--text-3);border-top:1px solid var(--line);padding-top:8px;margin-top:3px}
+  .set-grp span{font-family:ui-monospace,Consolas,monospace;color:var(--accent,#d9a441);letter-spacing:0}
+  .set-form > .set-sum + .set-grp{border-top:0;margin-top:0;padding-top:0}
+  .chips{display:flex;flex-wrap:wrap;gap:4px}
+  .chip{font:inherit;font-size:10.5px;padding:2px 7px;border:1px solid var(--line);background:transparent;color:var(--text-2,#c9c6bd);border-radius:var(--r-xs,2px);cursor:pointer}
+  .chip:hover{border-color:var(--text-3);color:var(--text-1,#ece9e0)}
   .set-empty{padding:26px 14px;text-align:center;color:var(--text-3);font-size:11.5px;line-height:1.7}
   .set-empty .se-ico{width:34px;height:34px;margin:0 auto 9px;border-radius:4px;display:grid;place-items:center;background:#1b1a19;border:1px solid var(--line)}
   .set-empty .se-ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}
@@ -1001,6 +1010,8 @@ body.mini #miniBar{
               从左侧任务清单里选一条任务<br>就能在这里改价格、成色和开卖时间
             </div>
             <div class="set-form" id="setForm" hidden>
+              <div class="set-sum span2" id="setSum" aria-live="polite"></div>
+              <div class="set-grp span2"><span>01</span>要抢什么</div>
               <div class="fld span2">
                 <label for="setSeason">赛季目标</label>
                 <select id="setSeason" data-act="task-edit"></select>
@@ -1026,8 +1037,10 @@ body.mini #miniBar{
               <div class="fld">
                 <label for="setWearMax">磨损上限 <span class="q" tabindex="0" data-tip="0 到 1 之间，越小越新；0 = 不限（不建议，容易买到磨损很高的）。0.12 以内通常算崭新。">?</span></label>
                 <div class="pair"><input type="number" id="setWearMax" min="0" max="1" step="0.01" data-act="task-edit"><span class="unit">/ 1（越小越新）</span></div>
+                <div class="chips"><button type="button" class="chip" data-for="setWearMax" data-val="0.12">崭新 0.12</button><button type="button" class="chip" data-for="setWearMax" data-val="">不限</button></div>
                 <div class="fmsg" id="msgWearMax"></div>
               </div>
+              <div class="set-grp span2"><span>02</span>价格与数量</div>
               <div class="fld span2">
                 <label>价格区间 <span class="q" tabindex="0" data-tip="只买这个区间里的挂单。上限填 0 表示不设上限；下限填 0 表示从最便宜的开始。">?</span></label>
                 <div class="pair">
@@ -1036,16 +1049,20 @@ body.mini #miniBar{
                   <input type="number" id="setMaxPrice" min="0" step="1" placeholder="最高" data-act="task-edit">
                   <span class="unit">金币</span>
                 </div>
+                <div class="chips"><button type="button" class="chip" data-for="setMaxPrice" data-val="">不设上限</button><button type="button" class="chip" data-for="setMinPrice" data-val="">从最便宜开始</button><button type="button" class="chip" data-swap="1">对调高低</button></div>
                 <div class="fmsg" id="msgPrice"></div>
               </div>
               <div class="fld">
                 <label for="setQuota">本轮限量 <span class="q" tabindex="0" data-tip="这条任务最多抢几件。1 到 999，填 1 就是抢到一件就收手。">?</span></label>
                 <div class="pair"><input type="number" id="setQuota" min="1" max="999" step="1" data-act="task-edit"><span class="unit">件</span></div>
+                <div class="chips"><button type="button" class="chip" data-for="setQuota" data-val="1">1</button><button type="button" class="chip" data-for="setQuota" data-val="2">2</button><button type="button" class="chip" data-for="setQuota" data-val="5">5</button><button type="button" class="chip" data-for="setQuota" data-val="10">10</button></div>
                 <div class="fmsg" id="msgQuota"></div>
               </div>
-              <div class="fld">
+              <div class="set-grp span2"><span>03</span>时间与路线</div>
+              <div class="fld span2">
                 <label for="setFireAt">公示期 <span class="q" tabindex="0" data-tip="商品结束公示、可以购买的时刻。留空表示手动开始。">?</span></label>
                 <input type="datetime-local" id="setFireAt" step="1" data-act="task-edit">
+                <div class="chips"><button type="button" class="chip" data-fire="10">10 分钟后</button><button type="button" class="chip" data-fire="60">1 小时后</button><button type="button" class="chip" data-for="setFireAt" data-val="">手动开始</button></div>
               </div>
               <div class="fld span2">
                 <label>抢购路线 <span class="q" tabindex="0" data-tip="公示期倒计时：等归零后直接买；在售列表：盯搜索结果；商品页按钮：在详情页点购买。">?</span></label>
@@ -2960,7 +2977,34 @@ function validateTaskForm() {
   const btn = $('#btnTaskSave');
   btn.disabled = bad;
   btn.title = bad ? '先修正标红的输入再保存' : '';
+  updateTaskSummary();
   return !bad;
+}
+/* 表单顶部一句人话摘要：改任何一项都立刻对应更新，不用滚到底看全貌 */
+function updateTaskSummary() {
+  const box = $('#setSum');
+  if (!box) return;
+  const v = id => ($('#' + id) || {}).value || '';
+  const num = id => Number(v(id)) || 0;
+  const optTxt = id => { const s = $('#' + id); return s && s.value ? s.options[s.selectedIndex].text : ''; };
+  const craft = ($('#setCraft .on') || {}).dataset ? $('#setCraft .on').dataset.craft : '';
+  const wfMap = { countdown: '公示期倒计时', list: '在售列表', detail: '商品页按钮' };
+  const wf = ($('#setWorkflow .on') || {}).dataset ? $('#setWorkflow .on').dataset.wf : '';
+  const lo = num('setMinPrice'), hi = num('setMaxPrice');
+  const price = !lo && !hi ? '价格不限' : (hi ? `${lo}–${hi} 金币` : `≥ ${lo} 金币`);
+  const parts = [
+    optTxt('setSeason') || '不限赛季',
+    craft || '不限品阶',
+    optTxt('setWear') || '不限成色',
+    num('setWearMax') ? `磨损 ≤ ${num('setWearMax')}` : '',
+    price,
+    `抢 ${num('setQuota') || 1} 件`,
+    wfMap[wf] || '',
+    v('setFireAt') ? '公示期 ' + v('setFireAt').replace('T', ' ').slice(0, 16) : '手动开始',
+  ].filter(Boolean);
+  const on = $('#setEnabled').classList.contains('on');
+  box.classList.toggle('off', !on);
+  box.innerHTML = (on ? '' : '<b>已停用</b> · ') + parts.map(esc).join(' · ');
 }
 
 function renderTaskForm() {
@@ -3014,6 +3058,18 @@ function markDirty() {
 }
 $('#setForm').addEventListener('input', markDirty);
 $('#setForm').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip');
+  if (chip) {
+    if (chip.dataset.swap) {
+      const a = $('#setMinPrice'), b = $('#setMaxPrice'), t = a.value; a.value = b.value; b.value = t;
+    } else if (chip.dataset.fire) {
+      $('#setFireAt').value = toLocalInput(Math.floor(Date.now() / 1000) + Number(chip.dataset.fire) * 60);
+    } else if (chip.dataset.for) {
+      $('#' + chip.dataset.for).value = chip.dataset.val;
+    }
+    markDirty();
+    return;
+  }
   const craft = e.target.closest('#setCraft [data-craft]');
   const wf = e.target.closest('#setWorkflow [data-wf]');
   const en = e.target.closest('#setEnabled');
