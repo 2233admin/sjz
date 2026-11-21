@@ -1195,6 +1195,10 @@
   .rp-toolbar select{background:rgba(15,247,150,.045);border:1px solid rgba(15,247,150,.28);border-radius:0;color:var(--text)}
   .rp-toolbar select:hover{border-color:rgba(15,247,150,.55)}
   .setrow .ctl select{min-width:96px}
+  #panelTaskSet .set-sum.off,#panelTaskSet .set-sum.off{border-left-color:var(--warn);background:rgba(232,176,75,.07)}
+  #panelTaskSet .set-sum.off b{color:var(--warn)}
+  .set-sum .sum-on{display:block;margin-top:6px;font:inherit;font-size:11.5px;font-weight:700;color:#04140c;background:var(--accent);border:0;padding:3px 12px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}
+  .set-sum .sum-on:hover{filter:brightness(1.12)}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
@@ -3531,7 +3535,7 @@ function updateTaskSummary() {
   ].filter(Boolean);
   const on = $('#setEnabled').classList.contains('on');
   box.classList.toggle('off', !on);
-  box.innerHTML = (on ? '' : '<b>已停用</b> · ') + parts.map(esc).join(' · ');
+  box.innerHTML = (on ? '' : '<b>未启用</b> · ') + parts.map(esc).join(' · ') + (on ? '' : '<button type="button" class="sum-on" id="sumEnable">启用这条任务</button>');
 }
 
 function renderTaskForm() {
@@ -3597,6 +3601,7 @@ $('#setForm').addEventListener('click', (e) => {
     markDirty();
     return;
   }
+  if (e.target.closest('#sumEnable')) { $('#setEnabled').click(); return; }
   const craft = e.target.closest('#setCraft [data-craft]');
   const wf = e.target.closest('#setWorkflow [data-wf]');
   const en = e.target.closest('#setEnabled');
