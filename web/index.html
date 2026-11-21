@@ -334,6 +334,10 @@
   .set-form{display:grid;grid-template-columns:1fr 1fr;gap:9px}
   .set-form .span2{grid-column:span 2}
   .set-form .fld input,.set-form .fld select{padding:5px 8px;font-size:11.5px}
+  /* 设置面板比窗口高：摘要钉在顶上，保存/删除钉在底下，不用滚到底才找得到保存 */
+  #panelTaskSet{overflow:visible}
+  #panelTaskSet .panel-foot{position:sticky;bottom:0;z-index:3}
+  .set-sum{position:sticky;top:0;z-index:2;box-shadow:0 6px 6px -4px #12110f}
   .set-sum{font-size:11.5px;line-height:1.6;padding:7px 9px;border-left:2px solid var(--accent,#d9a441);background:#171615;color:var(--text-2,#c9c6bd);min-height:1.6em}
   .set-sum b{color:var(--text-1,#ece9e0);font-weight:600}
   .set-sum.off{border-left-color:var(--line);color:var(--text-3)}
@@ -4381,8 +4385,18 @@ async function doQuit() {
 }
 
 /* ---------- 键盘与筛选 ---------- */
-function selectTask(id) {
-  S.sel = String(id);
+async function selectTask(id) {
+  id = String(id);
+  // 切到别的任务会丢掉这条没保存的改动：先问一句，别悄悄吞掉
+  if (S.dirty && S.sel && id !== String(S.sel)) {
+    const yes = await ask({
+      title: '放弃没保存的改动？',
+      body: '这条任务的设置改了还没保存，切到别的任务会丢掉这些改动。',
+      okText: '放弃并切换', danger: false
+    });
+    if (!yes) return;
+  }
+  S.sel = id;
   S.dirty = false;
   renderTaskTable(true);
   renderTaskForm();
