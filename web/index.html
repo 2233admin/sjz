@@ -210,7 +210,8 @@
   .fld .pair input{width:100%}
   .fld .unit{font-size:10px;color:var(--text-3);flex:0 0 auto}
   .fld .fmsg{font-size:10px;color:#ffb4b8;line-height:1.35;min-height:0}
-  .fld .fmsg:empty{display:none}
+  /* 占住一行：报错行出现/消失时下面的表单和保存按钮不再跳位 */
+  .fld .fmsg:empty{display:block;min-height:13px}
   .seg{display:flex;background:#11100f;border:1px solid var(--line);border-radius:var(--r-sm);padding:2px;gap:2px}
   .seg button{padding:5px 9px;border-radius:4px;font-size:11px;color:var(--text-3);transition:color var(--dur),background var(--dur);white-space:nowrap;flex:1}
   .seg button:hover{color:var(--text-2);background:#1c1b1a}
@@ -1907,6 +1908,9 @@ const TOAST_MAX = 4;
 function toast(msg, kind = 'ok') {
   const host = $('#toastHost');
   if (!host) return;
+  const text = String(msg == null ? '' : msg);
+  // 同一句话已经在屏上就不再叠一条（连点启动会连发好几条一样的失败提示）
+  if ([...host.children].some(t => !t.classList.contains('out') && t.textContent === text)) return;
   const el = document.createElement('div');
   el.className = 'toast show ' + kind;
   el.innerHTML = '<svg class="t-ico" viewBox="0 0 16 16">' + (ICO[kind] || ICO.ok) + '</svg><span></span>';
