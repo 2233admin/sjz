@@ -979,6 +979,52 @@
   .panel{background-image:linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent));
     background-repeat:no-repeat;background-size:10px 1px,1px 10px,10px 1px,1px 10px;background-position:right top,right top,right bottom,right bottom;background-origin:border-box;opacity:1}
   .panel-head .sub,.hint,.k{font-family:'Cascadia Mono',Consolas,monospace;letter-spacing:.02em}
+
+  /* ---------- 全息 HUD 层：网格底、扫描线、扫描光束、发光描边、四角括号、数字荧光 ---------- */
+  @keyframes hudBeam{0%{transform:translateY(-12vh)}100%{transform:translateY(112vh)}}
+  @keyframes hudFlick{0%,100%{opacity:1}92%{opacity:1}93%{opacity:.82}94%{opacity:1}96%{opacity:.9}97%{opacity:1}}
+  @keyframes hudBoot{0%{opacity:0;filter:brightness(2.2) blur(2px);transform:translateY(3px)}40%{opacity:.7;filter:brightness(1.6)}100%{opacity:1;filter:none;transform:none}}
+  @keyframes hudBlink{0%,100%{opacity:1}50%{opacity:.25}}
+  body{background-image:
+      radial-gradient(ellipse at 50% 0%,rgba(15,247,150,.07),transparent 55%),
+      linear-gradient(rgba(15,247,150,.045) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(15,247,150,.045) 1px,transparent 1px);
+    background-size:100% 100%,32px 32px,32px 32px;background-attachment:fixed}
+  body::before{content:"";position:fixed;inset:0;z-index:99990;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+  body::after{content:"";position:fixed;left:0;right:0;top:0;height:14vh;z-index:99991;pointer-events:none;
+    background:linear-gradient(180deg,transparent,rgba(15,247,150,.07) 70%,rgba(15,247,150,.16));
+    border-bottom:1px solid rgba(15,247,150,.28);animation:hudBeam 7s linear infinite}
+  .page.on,.page:not([hidden]){animation:hudBoot .45s ease-out both}
+  .panel{background-color:rgba(10,18,15,.55);backdrop-filter:blur(3px);
+    border:1px solid rgba(15,247,150,.22);border-radius:0;
+    box-shadow:0 0 0 1px rgba(15,247,150,.04) inset,0 0 18px rgba(15,247,150,.07) inset,0 0 14px rgba(15,247,150,.06);
+    /* 四角括号 */
+    background-image:
+      linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent)),
+      linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent)),
+      linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent)),
+      linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent));
+    background-repeat:no-repeat;
+    background-size:12px 2px,2px 12px,12px 2px,2px 12px,12px 2px,2px 12px,12px 2px,2px 12px;
+    background-position:left top,left top,right top,right top,left bottom,left bottom,right bottom,right bottom;
+    background-origin:border-box}
+  .panel-head{border-bottom:1px solid rgba(15,247,150,.2);background:linear-gradient(90deg,rgba(15,247,150,.09),transparent 70%)}
+  .panel-head h2{text-shadow:0 0 8px rgba(15,247,150,.55)}
+  .panel-head::after{content:"";position:absolute;right:10px;top:50%;width:6px;height:6px;margin-top:-3px;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:hudBlink 1.8s steps(2,end) infinite}
+  .tabs button.on,.side-tabs button.on{text-shadow:0 0 10px rgba(15,247,150,.7)}
+  .stat .v,.scard .sc-val,.sc-num,.stat b{text-shadow:0 0 10px rgba(15,247,150,.45)}
+  .btn.primary{box-shadow:none;filter:drop-shadow(0 0 6px rgba(15,247,150,.55))}
+  .btn:not(.primary):not(.ghost):not(.danger):not(.danger-solid){background:rgba(15,247,150,.06);border-color:rgba(15,247,150,.3);color:var(--text)}
+  .btn:not(.primary):not(.ghost):not(.danger):not(.danger-solid):hover{background:rgba(15,247,150,.16);border-color:var(--accent);color:#fff}
+  .body-row.sel{box-shadow:inset 3px 0 0 var(--accent),0 0 18px rgba(15,247,150,.12) inset}
+  .gcard{background:rgba(10,18,15,.5);border:1px solid rgba(15,247,150,.2);transition:border-color .15s,box-shadow .15s,transform .15s}
+  .gcard:hover{border-color:var(--accent);box-shadow:0 0 16px rgba(15,247,150,.25);transform:translateY(-2px)}
+  dialog.dialog{background:rgba(8,14,12,.88);backdrop-filter:blur(6px);box-shadow:0 0 40px rgba(15,247,150,.25)}
+  .toast{background:rgba(8,14,12,.92);box-shadow:0 0 14px rgba(15,247,150,.25)}
+  header,.topbar{animation:hudFlick 6s infinite}
+  .setrow,.body-row{border-color:rgba(15,247,150,.1)}
+  input:focus,select:focus{outline:none;box-shadow:0 1px 0 var(--accent),0 6px 12px -8px rgba(15,247,150,.7)}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
