@@ -1085,6 +1085,53 @@
   #panelTaskSet .unit{font-family:var(--font-num);color:var(--text-3)}
   #panelTaskSet .fmsg:not(:empty){color:var(--bad);font-size:11px;margin-top:3px}
   #panelTaskSet .panel-foot{border-top:1px solid rgba(15,247,150,.25);background:rgba(5,11,8,.92)}
+
+  /* ---------- 40K 帝国机械教风格：黑钢 + 黄铜铆钉框 + 绿色认知机屏 + 血红警示；罗马数字分区 ---------- */
+  :root{--brass:#b08d57;--brass-2:#d9bb77;--brass-dim:rgba(176,141,87,.38);--blood:#b3262d;--font-gothic:"Palatino Linotype","Book Antiqua",Palatino,Georgia,"Songti SC","Microsoft YaHei",serif}
+  .panel{border:1px solid var(--brass-dim);
+    box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 0 2px rgba(176,141,87,.12),inset 0 0 26px rgba(0,0,0,.55);
+    background-image:
+      radial-gradient(circle,var(--brass-2) 0 1.5px,#5a4527 2px,transparent 2.6px),
+      radial-gradient(circle,var(--brass-2) 0 1.5px,#5a4527 2px,transparent 2.6px),
+      radial-gradient(circle,var(--brass-2) 0 1.5px,#5a4527 2px,transparent 2.6px),
+      radial-gradient(circle,var(--brass-2) 0 1.5px,#5a4527 2px,transparent 2.6px);
+    background-size:7px 7px;background-repeat:no-repeat;
+    background-position:3px 3px,calc(100% - 3px) 3px,3px calc(100% - 3px),calc(100% - 3px) calc(100% - 3px)}
+  .panel-head{border-bottom:1px solid var(--brass-dim);background:linear-gradient(180deg,rgba(176,141,87,.12),rgba(176,141,87,.02))}
+  .panel-head::before{content:"";background:var(--brass-2);transform:translateY(-50%) rotate(45deg);width:6px;height:6px;left:5px;top:50%;animation:none;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 0 3px var(--brass-dim)}
+  .panel-head{padding-left:20px}
+  .panel-head h2{font-family:var(--font-gothic);color:var(--brass-2);text-shadow:0 1px 0 #000;letter-spacing:.2em;font-weight:700}
+  .panel-head::after{background:var(--blood);box-shadow:0 0 8px var(--blood)}
+  .btn.danger,.btn.danger-solid{background:linear-gradient(180deg,#8f1d24,#5e1218);border-color:#c0555b;color:#ffd9db}
+  .btn.danger:hover,.btn.danger-solid:hover{background:linear-gradient(180deg,#a8232b,#701820);color:#fff}
+  #panelTaskSet .set-form{counter-reset:grp}
+  #panelTaskSet .set-grp{counter-increment:grp;border-left:0;border-top:1px solid var(--brass-dim);border-bottom:1px solid var(--brass-dim);
+    background:linear-gradient(90deg,rgba(176,141,87,.18),rgba(176,141,87,.03));padding:6px 12px;font-family:var(--font-gothic);color:var(--brass-2);letter-spacing:.22em;text-shadow:0 1px 0 #000;position:relative}
+  #panelTaskSet .set-grp::before{content:counter(grp,upper-roman);font-family:var(--font-gothic);font-weight:700;color:#fff;border:1px solid var(--brass);padding:0 6px;min-width:22px;text-align:center;letter-spacing:.05em;font-size:11px;background:rgba(0,0,0,.45)}
+  #panelTaskSet .set-grp::after{content:"";position:absolute;right:8px;top:50%;width:34px;height:6px;margin-top:-3px;background:repeating-linear-gradient(-45deg,var(--brass) 0 3px,transparent 3px 6px);opacity:.7}
+  #panelTaskSet .fld > label::before{background:var(--brass);transform:none;width:4px;height:4px;border-radius:50%}
+  #panelTaskSet .fld > label,#panelTaskSet .fld > .lb{font-family:var(--font-gothic);color:#cdbf9f;letter-spacing:.1em}
+  #panelTaskSet .set-sum{border-color:var(--brass-dim);border-left-color:var(--brass);background:rgba(176,141,87,.07);font-family:var(--font-gothic)}
+  #panelTaskSet .set-sum b{color:var(--brass-2);text-shadow:0 1px 0 #000}
+  #panelTaskSet .set-sum.off{border-left-color:var(--blood);background:rgba(179,38,45,.08)}
+  #panelTaskSet .set-sum.off b{color:#ff8087}
+  #panelTaskSet .panel-foot{border-top:0;background:rgba(5,6,6,.95);position:relative}
+  #panelTaskSet .panel-foot::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:repeating-linear-gradient(-45deg,var(--brass) 0 6px,#0b0b0c 6px 12px);opacity:.75}
+  /* 下半部分：价格区间单位不再被挤掉，日期用深色控件，快捷项留出间距 */
+  #panelTaskSet .pair{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+  #panelTaskSet .pair input{min-width:0;flex:1 1 0;width:auto}
+  #panelTaskSet .pair .unit{flex:0 0 auto;white-space:nowrap}
+  #panelTaskSet input[type=datetime-local]{color-scheme:dark;font-family:var(--font-num);letter-spacing:.04em}
+  #panelTaskSet .chips{gap:6px;margin-top:6px}
+  #panelTaskSet .chip{padding:3px 10px;background:rgba(176,141,87,.1);color:#cdbf9f;border:1px solid var(--brass-dim);clip-path:none}
+  #panelTaskSet .chip:hover{background:rgba(176,141,87,.22);color:#fff;border-color:var(--brass)}
+  #panelTaskSet .set-form .fld:last-child{padding-bottom:6px}
+
+  #panelTaskSet .set-sum{background:#0d0e0c !important;z-index:5}
+  #panelTaskSet .pair{gap:4px}
+  #panelTaskSet .pair input{padding:6px 5px !important}
+  #panelTaskSet .pair .unit{font-size:10px;padding:0}
+  #panelTaskSet .set-form > .set-sum{box-shadow:0 8px 8px -4px #0b0c0b}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
