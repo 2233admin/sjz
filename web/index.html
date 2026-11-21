@@ -6042,7 +6042,7 @@ document.addEventListener('click', e => {
   requestAnimationFrame(frame);
 })();
 
-/* 选中/切换任务时重放设置栏的展开动画 */
+/* 首次选中任务时播放设置栏的展开动画 */
 function kickForm() {
   const f = document.getElementById('setForm');
   if (!f) return;
@@ -6054,7 +6054,8 @@ function kickForm() {
   let lastSel = null;
   window.renderTaskForm = function () {
     const r = orig.apply(this, arguments);
-    if (S.sel !== lastSel) { lastSel = S.sel; kickForm(); }
+    /* 只在“从没选中到选中”时播一次；任务间切换不再重放，避免一点就闪 */
+    if (S.sel !== lastSel) { if (lastSel == null && S.sel != null) kickForm(); lastSel = S.sel; }
     return r;
   };
 })();
