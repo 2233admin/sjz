@@ -761,8 +761,6 @@
   @keyframes pgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   .page:not([hidden]){animation:pgIn .24s cubic-bezier(.2,.7,.2,1)}
   #sideIdle[data-tab=set] #panelTaskSet,#sideIdle[data-tab=beat] #panelBeat{animation:pgIn .2s cubic-bezier(.2,.7,.2,1)}
-  .scard{animation:pgIn .3s cubic-bezier(.2,.7,.2,1) backwards}
-  .scard:nth-child(2){animation-delay:.04s}.scard:nth-child(3){animation-delay:.08s}.scard:nth-child(4){animation-delay:.12s}
   .body-row{transition:background var(--dur)}
   .body-row:hover{background:rgba(255,255,255,.025)}
   .mini-bar i{transition:width .5s cubic-bezier(.2,.7,.2,1)}
@@ -771,6 +769,23 @@
   .btn:active:not(:disabled){transform:translateY(1px)}
   .set-sum{transition:opacity .15s}
   .chip{transition:color var(--dur)}
+  /* ---------- 自检：沉底一行，正常只露状态点，有问题才展开报警 ---------- */
+  #statCards{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:0 22px;border:0;border-top:1px solid var(--line);padding:6px 2px 0}
+  #statCards .scard{border:0;padding:2px 0;gap:7px;background:none;flex:0 0 auto}
+  #statCards .scard:first-child,#statCards .scard:nth-child(odd){padding-left:0}
+  #statCards .scard + .scard{border:0}
+  #statCards .sc-body{display:flex;align-items:baseline;gap:7px;flex:0 1 auto}
+  #statCards .sc-k{color:var(--text-3)}
+  #statCards .sc-v{margin:0;font-weight:500;color:var(--text-2)}
+  #statCards .sc-s,#statCards .sc-act{display:none}
+  #statCards .scard .sc-dot{order:-1}
+  #statCards .scard.warn .sc-v,#statCards .scard.bad .sc-v{font-weight:650}
+  #statCards .scard.warn .sc-v{color:var(--warn)}
+  #statCards .scard.bad .sc-v{color:var(--bad)}
+  #statCards .scard.warn .sc-s,#statCards .scard.bad .sc-s{display:inline;color:var(--text-2)}
+  #statCards .scard.warn .sc-act,#statCards .scard.bad .sc-act{display:inline-flex}
+  #statCards .scard.warn,#statCards .scard.bad{flex:1 1 100%;padding:5px 0}
+  #statCards .scard.warn .sc-body,#statCards .scard.bad .sc-body{flex:1 1 auto;flex-wrap:wrap}
   @media (max-width:1560px){
     .brand-t em{display:none}
     .plan{flex-basis:190px}
@@ -1026,13 +1041,6 @@ body.mini #miniBar{
 
 <main class="app">
   <section class="page on" id="page-run" role="tabpanel" aria-labelledby="tab-run">
-    <div class="statcards" id="statCards">
-      <div class="scard"><div class="sc-ico"><span class="skel" style="width:15px;height:15px"></span></div><div class="sc-body"><div class="sc-k">游戏窗口</div><div class="sc-v">检查中…</div><div class="sc-s">正在读取画面位置</div></div></div>
-      <div class="scard"><div class="sc-ico"><span class="skel" style="width:15px;height:15px"></span></div><div class="sc-body"><div class="sc-k">画面识别</div><div class="sc-v">检查中…</div><div class="sc-s">正在检测识别服务</div></div></div>
-      <div class="scard"><div class="sc-ico"><span class="skel" style="width:15px;height:15px"></span></div><div class="sc-body"><div class="sc-k">时间校准</div><div class="sc-v">自动校准中</div><div class="sc-s">启动后自动完成，无需操作</div></div></div>
-      <div class="scard"><div class="sc-ico"><span class="skel" style="width:15px;height:15px"></span></div><div class="sc-body"><div class="sc-k">购买延迟</div><div class="sc-v">检查中…</div><div class="sc-s">正在读取延迟设置</div></div></div>
-    </div>
-
     <div class="run-grid" id="runIdle">
       <section class="panel tasks-panel">
         <div class="panel-head">
@@ -1268,6 +1276,13 @@ body.mini #miniBar{
           <span class="hint" id="excHint"></span>
         </div>
       </div>
+    </div>
+
+    <div class="statcards" id="statCards">
+      <div class="scard"><div class="sc-ico"><span class="skel" style="width:15px;height:15px"></span></div><div class="sc-body"><div class="sc-k">游戏窗口</div><div class="sc-v">检查中…</div><div class="sc-s">正在读取画面位置</div></div></div>
+      <div class="scard"><div class="sc-ico"><span class="skel" style="width:15px;height:15px"></span></div><div class="sc-body"><div class="sc-k">画面识别</div><div class="sc-v">检查中…</div><div class="sc-s">正在检测识别服务</div></div></div>
+      <div class="scard"><div class="sc-ico"><span class="skel" style="width:15px;height:15px"></span></div><div class="sc-body"><div class="sc-k">时间校准</div><div class="sc-v">自动校准中</div><div class="sc-s">启动后自动完成，无需操作</div></div></div>
+      <div class="scard"><div class="sc-ico"><span class="skel" style="width:15px;height:15px"></span></div><div class="sc-body"><div class="sc-k">购买延迟</div><div class="sc-v">检查中…</div><div class="sc-s">正在读取延迟设置</div></div></div>
     </div>
   </section>
   <section class="page" id="page-lib" role="tabpanel" aria-labelledby="tab-lib" hidden>
@@ -3432,7 +3447,10 @@ function paintStats() {
     statCard(tKind, 'clock', '时间校准', tVal, tSub, clockAuto.running ? null : 'timesync', clockAuto.running ? null : '/api/timesync', clockAuto.running ? null : '立即重校'),
     statCard(dKind, 'bolt', '购买延迟', delayVal == null ? '读不到设置' : `${delayVal} ${fireIt && fireIt.hint ? fireIt.hint : '毫秒'}`, adaptive ? `动态调整${adaptive.value ? '已开' : '已关'} · 点击更快更准` : '按固定间隔连点', null, null, null)
   ];
-  box.innerHTML = cards.join('');
+  const html = cards.join('');
+  if (box.dataset.sig === html) return;
+  box.dataset.sig = html;
+  box.innerHTML = html;
 }
 
 function paintProg() {
