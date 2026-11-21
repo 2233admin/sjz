@@ -2075,6 +2075,17 @@ body.mini #miniBar{
           <div class="setrow"><div class="nm">授权状态<small class="ds">没有授权也能在本机跑，授权只影响试用期。</small></div><div class="ctl"><span class="hint" id="licenseState">读取中…</span><button class="btn sm" data-act="license-refresh" data-api="/api/license">刷新</button></div></div>
           <div class="setrow"><div class="nm">授权说明</div><div class="ctl"><span class="hint" id="licenseNote">—</span></div></div>
         </div>
+        <div class="setsec" id="licSec">
+          <h3>激活与许可</h3>
+          <p class="desc">拿到卡密后在这里兑换。许可服务器地址由发卡方提供，填一次会记住。</p>
+          <div class="setrow"><div class="nm">授权编号<small class="ds">这台电脑当前许可的编号</small></div><div class="ctl"><span class="hint" id="licId">—</span></div></div>
+          <div class="setrow"><div class="nm">档位</div><div class="ctl"><span class="hint" id="licTier">—</span></div></div>
+          <div class="setrow"><div class="nm">到期</div><div class="ctl"><span class="hint" id="licExp">—</span></div></div>
+          <div class="setrow"><div class="nm">许可服务器</div><div class="ctl"><input type="text" id="licServer" placeholder="http://许可服务器地址" autocomplete="off" spellcheck="false" style="width:260px"></div></div>
+          <div class="setrow"><div class="nm">卡密</div><div class="ctl"><input type="text" id="licKey" placeholder="粘贴卡密" autocomplete="off" spellcheck="false" style="width:260px"><button type="button" class="btn sm primary" id="licActivate"></button></div></div>
+          <div class="setrow"><div class="nm">联网校验<small class="ds">续期、同步吊销名单。没联网也能用，只是看不到最新状态。</small></div><div class="ctl"><button type="button" class="btn sm" id="licRefreshNet"></button><button type="button" class="btn sm" id="licPull"></button></div></div>
+          <div class="fmsg" id="licMsg" aria-live="polite"></div>
+        </div>
         <div class="setsec">
           <h3>数据存放位置</h3>
           <p class="desc">配置、成交记录、截图都在程序同级的 data 目录。换电脑时整目录拷走即可。</p>
@@ -5120,6 +5131,7 @@ async function loadLicense(force) {
     if ($('#licenseState')) $('#licenseState').textContent = licenseText(r);
     if ($('#licenseNote')) $('#licenseNote').textContent = licenseNote(r);
     S.license = r;
+    if (window.paintLicenseDetail) window.paintLicenseDetail(r);
   } catch (e) {
     if ($('#licenseState')) $('#licenseState').textContent = '读不出来';
     if ($('#licenseNote')) $('#licenseNote').textContent = humanize(e);
@@ -5130,7 +5142,7 @@ function licenseText(r) {
   if (r.status === 'error') return '读取失败';
   const ok = r.ok !== false;
   const tier = r.trial ? '试用' : (r.tier || '已授权');
-  if (!ok) return `不可用（${tier}）`;
+  if (!ok) return r.present === false ? '未激活' : '不可用 · ' + (({ expired: '已过期', revoked: '已吊销', invalid: '许可无效', missing: '未激活' })[r.status] || '需要重新激活');
   if (r.remaining_s != null && +r.remaining_s > 0) {
     const h = Math.floor(+r.remaining_s / 3600);
     const m = Math.floor((+r.remaining_s % 3600) / 60);
@@ -6208,6 +6220,56 @@ function kickForm() {
     pane.insertBefore(bar, pane.firstChild); pane.classList.add('tabbed'); show(0);
     secs.forEach(el => { const sum = el.querySelector(':scope > .setsec-sum'); if (sum) sum.style.display = 'none'; const h = el.querySelector(':scope > h3'); if (h) h.style.display = 'none'; });
   });
+})();
+
+/* ---------- 激活与许可：卡密兑换 / 联网校验 / 拉吊销名单 ---------- */
+(function licensePanel() {
+  const sec = document.getElementById('licSec'); if (!sec) return;
+  Object.assign(IC, {
+    key: 'M6 10.5a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM8.2 8.3l5.3 5.2M11.5 11.3l1.6-1.6M10 9.8l1.2-1.2',
+    down: 'M8 2.5v8M4.7 7.4L8 10.7l3.3-3.3M3 13.5h10'
+  });
+  const el = id => document.getElementById(id);
+  el('licActivate').innerHTML = ic('key') + '兑换激活';
+  el('licRefreshNet').innerHTML = ic('refresh') + '联网校验';
+  el('licPull').innerHTML = ic('down') + '更新吊销名单';
+  try { el('licServer').value = localStorage.getItem('sjz.licServer') || ''; } catch (_) {}
+  const fmt = t => t ? new Date(+t * 1000).toLocaleString('zh-CN', { hour12: false }) : '—';
+  window.paintLicenseDetail = function (r) {
+    r = r || {};
+    el('licId').textContent = r.lic_id || (r.present === false ? '尚未激活' : '—');
+    el('licTier').textContent = r.trial ? '试用' : (r.tier || '—');
+    el('licExp').textContent = r.exp ? fmt(r.exp) : (r.remaining_s != null && +r.remaining_s > 0 ? '剩 ' + Math.ceil(+r.remaining_s / 86400) + ' 天' : '—');
+  };
+  if (S.license) window.paintLicenseDetail(S.license);
+  function say(msg, bad) { const m = el('licMsg'); m.textContent = msg || ''; m.className = 'fmsg' + (bad ? ' err' : ''); }
+  function server() {
+    const v = el('licServer').value.trim();
+    if (!v) { say('先填许可服务器地址', true); el('licServer').focus(); return ''; }
+    if (!/^https?:\/\//i.test(v)) { say('地址要以 http:// 或 https:// 开头', true); el('licServer').focus(); return ''; }
+    try { localStorage.setItem('sjz.licServer', v); } catch (_) {}
+    return v;
+  }
+  async function call(btn, path, body, okMsg) {
+    btn.disabled = true; say('正在联系许可服务器…');
+    try {
+      const r = await api(path, body, { method: 'POST', allowFail: true, timeout: 20000 });
+      if (r && r.ok) { say(okMsg); toast(okMsg, 'ok'); }
+      else say((r && (r.msg || (r.license && r.license.reason))) || '没成功，稍后再试', true);
+      loadLicense(true);
+      return r;
+    } catch (e) { say(humanize(e), true); }
+    finally { btn.disabled = false; }
+  }
+  el('licActivate').addEventListener('click', async () => {
+    const sv = server(); if (!sv) return;
+    const key = el('licKey').value.trim();
+    if (!key) { say('先粘贴卡密', true); el('licKey').focus(); return; }
+    const r = await call(el('licActivate'), '/api/license/activate', { server: sv, key }, '已激活');
+    if (r && r.ok) el('licKey').value = '';
+  });
+  el('licRefreshNet').addEventListener('click', () => { const sv = server(); if (sv) call(el('licRefreshNet'), '/api/license/refresh', { server: sv }, '校验完成'); });
+  el('licPull').addEventListener('click', () => { const sv = server(); if (sv) call(el('licPull'), '/api/license/revocations', { server: sv }, '吊销名单已更新'); });
 })();
 </script>
 <!-- CLICK-BURST-NOTICE END -->
