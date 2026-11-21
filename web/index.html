@@ -3447,6 +3447,15 @@ function paintStats() {
     statCard(tKind, 'clock', '时间校准', tVal, tSub, clockAuto.running ? null : 'timesync', clockAuto.running ? null : '/api/timesync', clockAuto.running ? null : '立即重校'),
     statCard(dKind, 'bolt', '购买延迟', delayVal == null ? '读不到设置' : `${delayVal} ${fireIt && fireIt.hint ? fireIt.hint : '毫秒'}`, adaptive ? `动态调整${adaptive.value ? '已开' : '已关'} · 点击更快更准` : '按固定间隔连点', null, null, null)
   ];
+  /* 状态从正常变成有问题的那一刻弹一次；恢复后再出问题会再弹。时间校准、延迟不算故障 */
+  if (S.status) {
+    const prev = S.chkPrev || (S.chkPrev = {});
+    [['window', '游戏窗口', wKind, wVal, wSub], ['eye', '画面识别', eyeKind, eyeVal, eyeSub]].forEach(([k, name, kind, val, sub]) => {
+      const bad = kind === 'bad' || kind === 'warn';
+      if (bad && prev[k] !== 'bad') toast(`${name}：${val}。${sub}`, 'err');
+      prev[k] = bad ? 'bad' : 'ok';
+    });
+  }
   const html = cards.join('');
   if (box.dataset.sig === html) return;
   box.dataset.sig = html;
