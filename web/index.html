@@ -8,33 +8,33 @@
 <style>
   :root{
     color-scheme:dark;
-    --bg:#0d0c0b;
-    --bg-2:#100f0e;
-    --surface:#171615;
-    --surface-2:#1b1a19;
-    --surface-3:#21201f;
-    --surface-4:#282726;
-    --line:#2a2928;
-    --line-2:#363534;
-    --line-3:#454443;
-    --text:#e7ecf5;
+    --bg:#0b0b0c;
+    --bg-2:#0f0f10;
+    --surface:#151516;
+    --surface-2:#19191a;
+    --surface-3:#202021;
+    --surface-4:#272728;
+    --line:#262628;
+    --line-2:#343436;
+    --line-3:#444446;
+    --text:#e8e8e9;
     --text-2:#acabaa;
     --text-3:#767574;
-    --accent:#d19a3a;
-    --accent-2:#e0b25c;
-    --accent-soft:rgba(209,154,58,.13);
+    --accent:#f0592a;
+    --accent-2:#ff7a4d;
+    --accent-soft:rgba(240,89,42,.13);
     --ok:#3ecf8e;
     --ok-soft:rgba(62,207,142,.11);
     --warn:#e8b04b;
     --warn-soft:rgba(232,176,75,.11);
     --bad:#f0606a;
     --bad-soft:rgba(240,96,106,.11);
-    --gold:#e6b45c;
+    --gold:#ff7a4d;
     --r-xs:2px; --r-sm:3px; --r-md:4px; --r-lg:6px;
     --shadow-1:none;
     --shadow-2:0 6px 20px rgba(0,0,0,.35);
     --dur:.16s;
-    --font-ui:"Segoe UI","Microsoft YaHei","PingFang SC",-apple-system,BlinkMacSystemFont,sans-serif;
+    --font-ui:"Bahnschrift","Segoe UI","Microsoft YaHei","PingFang SC",-apple-system,BlinkMacSystemFont,sans-serif;
     --font-num:"Cascadia Mono","JetBrains Mono",Consolas,"Courier New",monospace;
   }
   *{box-sizing:border-box}
@@ -184,9 +184,9 @@
   .btn.sm svg{width:12px;height:12px}
   .btn.lg{padding:8px 15px;font-size:12.5px;font-weight:600}
   .btn.primary{
-    background:#d19a3a;border-color:#d9a444;color:#1a1407;
+    background:#f0592a;border-color:#f0592a;color:#fff;
   }
-  .btn.primary:hover{background:#dcaa4f;border-color:#e8bd6c}
+  .btn.primary:hover{background:#ff6b3d;border-color:#ff8157}
   .btn.danger{background:#3a2024;border-color:#5d2c33;color:#ff9ea3}
   .btn.danger:hover{background:#4a262c;border-color:#7a353e;color:#ffc0c4}
   .btn.danger-solid{background:#c43d46;border-color:#d4515a;color:#fff}
@@ -196,7 +196,7 @@
   .btn.icon{width:28px;height:28px;padding:0}
   .btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
   .btn:disabled:hover{background:#262524;border-color:var(--line-2);transform:none}
-  .btn.primary:disabled:hover{background:#d19a3a;border-color:#d9a444}
+  .btn.primary:disabled:hover{background:#f0592a;border-color:#f0592a}
   .btn.danger:disabled:hover{background:#3a2024;border-color:#5d2c33}
   .spinner{width:13px;height:13px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex:0 0 auto}
   .spinner.dark{border-color:rgba(231,236,245,.16);border-top-color:var(--accent)}
@@ -284,8 +284,8 @@
   tbody tr:last-child td{border-bottom:0}
   tbody tr.body-row{cursor:pointer;transition:background var(--dur)}
   tbody tr.body-row:hover{background:#1c1b1a}
-  tbody tr.sel{background:rgba(209,154,58,.08);box-shadow:inset 2px 0 0 var(--accent)}
-  tbody tr.sel:hover{background:rgba(209,154,58,.11)}
+  tbody tr.sel{background:rgba(240,89,42,.08);box-shadow:inset 2px 0 0 var(--accent)}
+  tbody tr.sel:hover{background:rgba(240,89,42,.11)}
   td.idx{color:var(--text-3);font-family:var(--font-num);font-size:10.5px;width:38px;padding-right:2px}
   td.name{max-width:340px;overflow:hidden;text-overflow:ellipsis;color:#dbe5f4;font-weight:520}
   td.name .sub{display:block;color:var(--text-3);font-size:10px;font-weight:400;margin-top:1px;overflow:hidden;text-overflow:ellipsis}
@@ -294,30 +294,30 @@
   .tag{display:inline-flex;align-items:center;height:18px;padding:0 5px;border-radius:4px;background:#232221;
     color:#adacab;font-size:10px;font-weight:550;margin-right:4px;line-height:1;white-space:nowrap}
   .tag.s{background:rgba(62,207,142,.13);color:#8fe9c2}
-  .tag.a{background:rgba(209,154,58,.14);color:#e0b25c}
+  .tag.a{background:rgba(240,89,42,.14);color:#ff7a4d}
   .tag.b{background:rgba(232,176,75,.12);color:#f0cd85}
   .tag.c{background:#232221;color:#b2b1b0}
   .tag.hit{background:rgba(62,207,142,.16);color:#8fe9c2}
   .tag.bad{background:rgba(240,96,106,.14);color:#ffb4b8}
   .tag.warn{background:rgba(232,176,75,.14);color:#f0cd85}
-  .tag.info{background:rgba(209,154,58,.12);color:#e0b25c}
+  .tag.info{background:rgba(240,89,42,.12);color:#ff7a4d}
   .tag.mute{background:#232221;color:var(--text-3)}
   .tag.gold{background:rgba(230,180,92,.14);color:var(--gold)}
   .mini-bar{display:inline-block;width:54px;height:4px;border-radius:3px;background:#262524;overflow:hidden;vertical-align:middle;margin-left:6px}
   .mini-bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
   .tname{font-weight:600;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
   .tsub{font-size:9.5px;color:var(--text-3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
-  tbody tr.sel{background:rgba(209,154,58,.075);box-shadow:inset 2px 0 0 var(--accent)}
-  tbody tr.sel:hover{background:rgba(209,154,58,.1)}
+  tbody tr.sel{background:rgba(240,89,42,.075);box-shadow:inset 2px 0 0 var(--accent)}
+  tbody tr.sel:hover{background:rgba(240,89,42,.1)}
   .iconbtn{width:22px;height:22px;border-radius:3px;display:grid;place-items:center;color:var(--text-3);transition:background var(--dur),color var(--dur)}
   .iconbtn:hover{background:#242322;color:var(--text)}
-  .iconbtn.add{color:#e0b25c;box-shadow:inset 0 0 0 1px rgba(209,154,58,.34)}
+  .iconbtn.add{color:#ff7a4d;box-shadow:inset 0 0 0 1px rgba(240,89,42,.34)}
   .iconbtn.add:hover{background:var(--accent-soft);color:#f0d9a8}
   .kbd{font-family:var(--font-num);font-size:9px;line-height:1.5;padding:1px 4px;border-radius:3px;
     background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.1);color:#e4ebf9}
   .link{color:#8fb4ff;text-decoration:none;font-size:10.5px;font-family:var(--font-ui)}
   .link:hover{text-decoration:underline}
-  .iconbtn.on{background:var(--accent-soft);color:#e0b25c}
+  .iconbtn.on{background:var(--accent-soft);color:#ff7a4d}
   .iconbtn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   .rowtag{display:inline-flex;align-items:center;gap:4px}
 
@@ -338,11 +338,11 @@
   #panelTaskSet{overflow:visible}
   #panelTaskSet .panel-foot{position:sticky;bottom:0;z-index:3}
   .set-sum{position:sticky;top:0;z-index:2;box-shadow:0 6px 6px -4px #12110f}
-  .set-sum{font-size:11.5px;line-height:1.6;padding:7px 9px;border-left:2px solid var(--accent,#d9a441);background:#171615;color:var(--text-2,#c9c6bd);min-height:1.6em}
+  .set-sum{font-size:11.5px;line-height:1.6;padding:7px 9px;border-left:2px solid var(--accent,#f0592a);background:#171615;color:var(--text-2,#c9c6bd);min-height:1.6em}
   .set-sum b{color:var(--text-1,#ece9e0);font-weight:600}
   .set-sum.off{border-left-color:var(--line);color:var(--text-3)}
   .set-grp{display:flex;align-items:baseline;gap:7px;font-size:10.5px;letter-spacing:.14em;color:var(--text-3);border-top:1px solid var(--line);padding-top:8px;margin-top:3px}
-  .set-grp span{font-family:ui-monospace,Consolas,monospace;color:var(--accent,#d9a441);letter-spacing:0}
+  .set-grp span{font-family:ui-monospace,Consolas,monospace;color:var(--accent,#f0592a);letter-spacing:0}
   .set-form > .set-sum + .set-grp{border-top:0;margin-top:0;padding-top:0}
   .chips{display:flex;flex-wrap:wrap;gap:4px}
   .chip{font:inherit;font-size:10.5px;padding:2px 7px;border:1px solid var(--line);background:transparent;color:var(--text-2,#c9c6bd);border-radius:var(--r-xs,2px);cursor:pointer}
@@ -356,6 +356,12 @@
   .beat-list{display:flex;flex-direction:column}
   .beat-row{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:9px;align-items:center;padding:5px 0;border-bottom:1px solid #1e1d1c}
   .beat-row:last-child{border-bottom:0}
+  .beat-note{font-size:10.5px;color:var(--text-3);padding:0 0 7px}
+  .beat-more{border-top:1px solid var(--line);margin-top:4px}
+  .beat-more > summary{cursor:pointer;font-size:11px;color:var(--text-3);padding:7px 0;list-style:none}
+  .beat-more > summary::before{content:'＋ '}
+  .beat-more[open] > summary::before{content:'－ '}
+  .beat-more > summary::-webkit-details-marker{display:none}
   .beat-row .bl{font-size:11.5px;color:var(--text);min-width:0;display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .beat-row .bv{display:flex;justify-content:flex-end;align-items:center;gap:4px}
   .beat-row input{width:70px;padding:4px 6px;text-align:right;font-family:var(--font-num);font-size:11px}
@@ -385,7 +391,7 @@
   .step .ss{font-size:9.5px;color:var(--text-3);flex:0 0 auto}
   .step.done .sn{background:rgba(62,207,142,.14);border-color:rgba(62,207,142,.35);color:var(--ok)}
   .step.done .st{color:var(--text-2)}
-  .step.cur .sn{background:var(--accent-soft);border-color:rgba(209,154,58,.45);color:var(--accent-2);box-shadow:0 0 0 3px rgba(209,154,58,.08)}
+  .step.cur .sn{background:var(--accent-soft);border-color:rgba(240,89,42,.45);color:var(--accent-2);box-shadow:0 0 0 3px rgba(240,89,42,.08)}
   .step.cur .st{color:#fff;font-weight:600}
   .step.bad .sn{background:var(--bad-soft);border-color:rgba(240,96,106,.35);color:#ffb4b8}
 
@@ -401,8 +407,8 @@
   .qitem{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 13px;border-bottom:1px solid #1e1d1c}
   .qitem:last-child{border-bottom:0}
   .qitem .qi{width:24px;height:24px;border-radius:3px;display:grid;place-items:center;background:#1c1b1a;border:1px solid var(--line);font-size:10px;font-family:var(--font-num);color:var(--text-3)}
-  .qitem.cur{background:rgba(209,154,58,.06)}
-  .qitem.cur .qi{background:var(--accent-soft);border-color:rgba(209,154,58,.4);color:var(--accent-2)}
+  .qitem.cur{background:rgba(240,89,42,.06)}
+  .qitem.cur .qi{background:var(--accent-soft);border-color:rgba(240,89,42,.4);color:var(--accent-2)}
   .qitem.done .qi{background:var(--ok-soft);border-color:rgba(62,207,142,.3);color:var(--ok)}
   .qitem .qn{min-width:0}
   .qitem .qn b{display:block;font-size:11.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -500,7 +506,7 @@
   .lf-chip:hover{background:#1d1c1b;color:var(--text)}
   .lf-chip.on{background:var(--accent-soft);color:#c3d5ff}
   .lf-chip .n{margin-left:auto;font-family:var(--font-num);font-size:9.5px;color:var(--text-3)}
-  .lf-chip.on .n{color:#e0b25c}
+  .lf-chip.on .n{color:#ff7a4d}
   .lib-toolbar{display:flex;align-items:center;gap:7px;padding:8px 11px;border-bottom:1px solid var(--line);flex-wrap:wrap}
   .lib-toolbar input[type=search]{flex:1 1 160px;min-width:120px;padding:5px 9px;font-size:11.5px}
   .lib-toolbar .sp{margin-left:auto}
@@ -508,7 +514,7 @@
   .gcard{position:relative;display:flex;flex-direction:column;gap:6px;padding:10px 11px 9px;background:#1b1a19;border:1px solid var(--line);border-radius:var(--r-md);
     transition:border-color var(--dur),background var(--dur);min-width:0}
   .gcard:hover{border-color:var(--line-3);background:#1f1e1d}
-  .gcard.joined{border-color:rgba(209,154,58,.34);background:rgba(209,154,58,.055)}
+  .gcard.joined{border-color:rgba(240,89,42,.34);background:rgba(240,89,42,.055)}
   .gcard .gc-top{display:flex;align-items:flex-start;gap:6px}
   .gcard .gc-name{font-size:12px;font-weight:600;line-height:1.35;min-width:0;flex:1;word-break:break-all}
   .gcard .gc-tags{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
@@ -516,7 +522,7 @@
   .gcard .gc-acts{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:5px;border-top:1px solid #252423}
   .gcard .gc-acts .btn{flex:1}
   .gcard .gc-acts .joined{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;line-height:1;
-    color:#e0b25c;white-space:nowrap;min-width:0}
+    color:#ff7a4d;white-space:nowrap;min-width:0}
   .gcard .gc-acts .joined svg{width:11px;height:11px;flex:0 0 auto;fill:none;stroke:currentColor;
     stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .gcard .gc-count{position:absolute;top:-6px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:4px;
@@ -534,7 +540,7 @@
   .stat .v{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:21px;font-weight:600;letter-spacing:-.4px;line-height:1.25}
   .stat .v .u{font-size:9.5px;color:var(--text-3);font-weight:400;margin-left:2px}
   .stat .s{font-size:9.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .stat.gold .v{color:var(--gold)} .stat.ok .v{color:#8fe9c2} .stat.accent .v{color:#e0b25c}
+  .stat.gold .v{color:var(--gold)} .stat.ok .v{color:#8fe9c2} .stat.accent .v{color:#ff7a4d}
 
   .rec-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:10px}
   .rec-table{min-height:0}
@@ -545,7 +551,7 @@
   .chartbox{padding:12px 14px;min-height:190px}
   .chart{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:8px}
   .chart .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;min-width:0}
-  .chart .bar i{display:block;width:100%;max-width:30px;border-radius:3px 3px 0 0;background:#d19a3a;min-height:2px}
+  .chart .bar i{display:block;width:100%;max-width:30px;border-radius:3px 3px 0 0;background:#f0592a;min-height:2px}
   .chart .bar em{font-size:9px;color:var(--text-3);font-style:normal;white-space:nowrap}
   .chart .bar span{font-size:9px;color:var(--text-3);font-family:var(--font-num)}
   .chart-empty{height:150px;display:grid;place-items:center;color:var(--text-3);font-size:11.5px}
@@ -564,7 +570,7 @@
   .chart .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
     gap:4px;min-width:0;height:100%}
   .chart .col i{display:block;width:100%;max-width:32px;border-radius:3px 3px 0 0;
-    background:#d19a3a;min-height:2px}
+    background:#f0592a;min-height:2px}
   .chart .col i:not(.on){background:#252423}
   .chart .col b{font-size:9.5px;color:var(--text-2);font-family:var(--font-num);font-weight:500;line-height:1}
   .chart .col span{font-size:9px;color:var(--text-3);font-family:var(--font-num);line-height:1}
@@ -813,7 +819,7 @@
   .gstep{display:flex;gap:9px;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-sm);background:#171615}
   .gstep .gn{flex:0 0 20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-family:var(--font-num);background:#242322;color:var(--text-2)}
   .gstep.done .gn{background:var(--ok-soft);color:#a8e6c9}
-  .gstep.cur{border-color:rgba(209,154,58,.42);background:var(--accent-soft)}
+  .gstep.cur{border-color:rgba(240,89,42,.42);background:var(--accent-soft)}
   .gstep .gb{flex:1;min-width:0}
   .gstep b{display:block;font-size:12px}
   .gstep span{display:block;font-size:10.5px;color:var(--text-3);margin-top:2px}
@@ -1201,7 +1207,7 @@ body.mini #miniBar{
           <div class="ring">
             <svg viewBox="0 0 82 82">
               <circle cx="41" cy="41" r="34" fill="none" stroke="#252423" stroke-width="7"/>
-              <circle id="ringArc" cx="41" cy="41" r="34" fill="none" stroke="#d19a3a" stroke-width="7"
+              <circle id="ringArc" cx="41" cy="41" r="34" fill="none" stroke="#f0592a" stroke-width="7"
                 stroke-linecap="round" stroke-dasharray="213.6" stroke-dashoffset="213.6" transform="rotate(-90 41 41)"/>
             </svg>
             <div class="rv"><b id="ringPct">0%</b><span>额度</span></div>
@@ -2530,6 +2536,7 @@ async function runAction(act, btn) {
     case 'guide-go': return guideGo();
     case 'exc-recheck': return recheckException();
     case 'reload-switches': return loadSwitches();
+    case 'beat-auto': return toggleBeatAuto();
     case 'license-refresh': return loadLicense(true);
     case 'rp-grab': return rpGrab();
     case 'auto-calib': return rpCalibrate();
@@ -2772,14 +2779,32 @@ function renderBeat() {
     return;
   }
   const keys = ['fire.hz', 'fire.delay', 'fire.adaptive', 'fire.confirm_clicks', 'fire.confirm_gap', 'fire.jitter', 'fire.timeout'];
-  box.innerHTML = keys.map(k => {
+  const adp = switchItem('fire.adaptive'), jit = switchItem('fire.jitter');
+  const auto = !!(adp && adp.value) && !!(jit && +jit.value > 0);
+  const wasOpen = !!box.querySelector('details.beat-more[open]');
+  const rows = keys.map(k => {
     const it = switchItem(k);
     if (!it) return '';
     const label = `<span class="bl">${esc(it.label)} <span class="q" tabindex="0" data-tip="${esc(it.desc || it.hint || '')}">?</span></span>`;
     if (it.kind === 'bool') return `<div class="beat-row">${label}<span class="bv">${switchHtml(it)}</span></div>`;
     return `<div class="beat-row">${label}<span class="bv">${numHtml(it)}<span class="unit">${esc(unitOf(k))}</span></span></div>`;
   }).join('');
+  const autoRow = (adp && jit) ? `<div class="beat-row beat-auto"><span class="bl">自动随机 <span class="q" tabindex="0" data-tip="开：每次开点的延迟按上一轮实测自动校正，再加 0~${esc(jit.value > 0 ? jit.value : 10)} 毫秒随机量，节奏不会每轮一样。关：完全按下面手动填的数字，每轮一样。">?</span></span><span class="bv"><button class="switch${auto ? ' on' : ''}" role="switch" aria-checked="${auto}" data-act="beat-auto" aria-label="自动随机"><span class="knob"></span></button></span></div>
+    <div class="beat-note">${auto ? `延迟自动校正，每次再随机 0~${esc(jit.value)} 毫秒` : '现在每轮节奏完全一样，开启后由程序自动校正并随机'}</div>` : '';
+  box.innerHTML = autoRow + `<details class="beat-more"${wasOpen || !autoRow ? ' open' : ''}><summary>手动调整</summary>${rows}</details>`;
   paintBeatProgress();
+}
+
+async function toggleBeatAuto() {
+  const adp = switchItem('fire.adaptive'), jit = switchItem('fire.jitter');
+  if (!adp || !jit) return;
+  const on = !(adp.value && +jit.value > 0);
+  if (on) {
+    await applySwitch('fire.adaptive', true);
+    await applySwitch('fire.jitter', +jit.value > 0 ? +jit.value : 10);
+  } else {
+    await applySwitch('fire.jitter', 0);
+  }
 }
 
 function switchItem(key) {
@@ -4747,7 +4772,7 @@ function rpDraw() {
     if (!b) continue;
     const r = rpScreenRect(b);
     const on = name === RP.sel;
-    ctx.fillStyle = on ? 'rgba(209,154,58,.18)' : 'rgba(209,154,58,.05)';
+    ctx.fillStyle = on ? 'rgba(240,89,42,.18)' : 'rgba(240,89,42,.05)';
     ctx.strokeStyle = on ? '#7ea6ff' : 'rgba(232,238,250,.42)';
     ctx.lineWidth = on ? 2 : 1;
     ctx.fillRect(r.x, r.y, r.w, r.h);
@@ -4758,7 +4783,7 @@ function rpDraw() {
     ctx.fillText(rpLabel(name), r.x + 3, ty);
     if (on) {
       ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#d19a3a';
+      ctx.strokeStyle = '#f0592a';
       for (const [hx, hy] of [[r.x, r.y], [r.x + r.w, r.y], [r.x, r.y + r.h], [r.x + r.w, r.y + r.h]]) {
         ctx.fillRect(hx - 4, hy - 4, 8, 8);
         ctx.strokeRect(hx - 4.5, hy - 4.5, 9, 9);
