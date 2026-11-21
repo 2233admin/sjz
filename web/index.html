@@ -219,7 +219,7 @@
   .seg button:disabled{opacity:.4;cursor:not-allowed}
   .switch{width:34px;height:19px;border-radius:4px;background:#333231;border:1px solid #3d3c3b;position:relative;transition:background var(--dur),border-color var(--dur);flex:0 0 auto}
   .switch .knob{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#949392;transition:left var(--dur),background var(--dur)}
-  .switch.on{background:#5b5a59;border-color:#6f6e6d}
+  .switch.on{background:var(--accent);border-color:var(--accent)}
   .switch.on .knob{left:17px;background:#fff}
   .switch:disabled{opacity:.4;cursor:not-allowed}
   .chk{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;margin:0}
@@ -749,6 +749,29 @@
     .scard{border-left:0;padding-left:2px}
     .scard + .scard{border-top:1px solid var(--line)}
   }
+  /* ---------- 右栏分页 ---------- */
+  .side-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);flex:0 0 auto;padding:0 2px}
+  .side-tabs button{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0;font:inherit;font-size:12px;letter-spacing:.08em;color:var(--text-3);cursor:pointer;transition:color var(--dur),border-color var(--dur)}
+  .side-tabs button:hover{color:var(--text-2)}
+  .side-tabs button.on{color:var(--text);border-bottom-color:var(--accent)}
+  #sideIdle > .side-tabs{position:sticky;top:0;z-index:4;background:var(--bg)}
+  #sideIdle .set-sum{top:34px}
+  #panelTaskSet .panel-head h2,#panelBeat .panel-head h2{display:none}
+  #sideIdle[data-tab=set] #panelBeat,#sideIdle[data-tab=beat] #panelTaskSet{display:none}
+  /* ---------- 动效：短、轻、只做进入和反馈 ---------- */
+  @keyframes pgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .page:not([hidden]){animation:pgIn .24s cubic-bezier(.2,.7,.2,1)}
+  #sideIdle[data-tab=set] #panelTaskSet,#sideIdle[data-tab=beat] #panelBeat{animation:pgIn .2s cubic-bezier(.2,.7,.2,1)}
+  .scard{animation:pgIn .3s cubic-bezier(.2,.7,.2,1) backwards}
+  .scard:nth-child(2){animation-delay:.04s}.scard:nth-child(3){animation-delay:.08s}.scard:nth-child(4){animation-delay:.12s}
+  .body-row{transition:background var(--dur)}
+  .body-row:hover{background:rgba(255,255,255,.025)}
+  .mini-bar i{transition:width .5s cubic-bezier(.2,.7,.2,1)}
+  .beat-more[open] > *:not(summary){animation:pgIn .18s ease-out}
+  .btn{transition:background var(--dur),border-color var(--dur),color var(--dur),transform .08s}
+  .btn:active:not(:disabled){transform:translateY(1px)}
+  .set-sum{transition:opacity .15s}
+  .chip{transition:color var(--dur)}
   @media (max-width:1560px){
     .brand-t em{display:none}
     .plan{flex-basis:190px}
@@ -1058,7 +1081,11 @@ body.mini #miniBar{
         </div>
       </section>
 
-      <aside class="side">
+      <aside class="side" id="sideIdle" data-tab="set">
+        <div class="side-tabs" role="tablist">
+          <button type="button" role="tab" class="on" data-side="set" aria-selected="true">任务设置</button>
+          <button type="button" role="tab" data-side="beat" aria-selected="false">抢购节拍</button>
+        </div>
         <section class="panel" id="panelTaskSet">
           <div class="panel-head">
             <h2>任务设置</h2>
@@ -4478,6 +4505,8 @@ async function doQuit() {
 
 /* ---------- 键盘与筛选 ---------- */
 async function selectTask(id) {
+  const sb = document.querySelector('#sideIdle .side-tabs [data-side="set"]');
+  if (sb && !sb.classList.contains('on')) sb.click();
   id = String(id);
   // 切到别的任务会丢掉这条没保存的改动：先问一句，别悄悄吞掉
   if (S.dirty && S.sel && id !== String(S.sel)) {
@@ -5464,6 +5493,18 @@ boot();
     refresh: refresh, show: show, conflictNow: conflictNow
   };
 })(typeof window !== 'undefined' ? window : globalThis);
+
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('.side-tabs button');
+  if (!b) return;
+  const side = b.closest('.side');
+  side.dataset.tab = b.dataset.side;
+  side.querySelectorAll('.side-tabs button').forEach(x => {
+    const on = x === b;
+    x.classList.toggle('on', on);
+    x.setAttribute('aria-selected', String(on));
+  });
+});
 </script>
 <!-- CLICK-BURST-NOTICE END -->
 </body>
