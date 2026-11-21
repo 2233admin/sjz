@@ -801,6 +801,10 @@
   #statCards .scard .sc-ico{display:inline-grid;width:14px;height:14px;border:0;background:none}
   #statCards .scard .sc-ico svg{width:13px;height:13px}
   #statCards .scard .sc-dot{display:none}
+  .set-cta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:2px 0 6px}
+  .btn.working{pointer-events:none;opacity:.85}
+  .btn.working::before{content:'';width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:btnspin .7s linear infinite}
+  @keyframes btnspin{to{transform:rotate(360deg)}}
   @media (max-width:1560px){
     .brand-t em{display:none}
     .plan{flex-basis:190px}
@@ -2515,7 +2519,8 @@ async function handleStart() {
   if (S.starting) return;
   S.starting = true;
   const btn = $('#btnStartTop');
-  if (btn) btn.disabled = true;
+  if (btn) { btn.disabled = true; btn.classList.add('working'); }
+  const stt = $('#startTopTxt'); if (stt) stt.textContent = '检查中…';
   setGlobal('busy', '正在检查环境并启动抢购', '', '进行中');
   let r;
   try {
@@ -2525,7 +2530,8 @@ async function handleStart() {
     return;
   } finally {
     S.starting = false;
-    if (btn) btn.disabled = false;
+    if (btn) { btn.disabled = false; btn.classList.remove('working'); }
+    if (stt && stt.textContent === '检查中…') stt.textContent = '启动抢购';
   }
   if (!r || r.ok === false) { await startFailed(new Error((r && r.msg) || '启动没有成功')); return; }
   clearException();
@@ -2589,6 +2595,7 @@ async function runAction(act, btn) {
     case 'exc-recheck': return recheckException();
     case 'reload-switches': return loadSwitches();
     case 'beat-auto': return toggleBeatAuto();
+    case 'go-lib': { const tb = $('#tab-lib'); if (tb) tb.click(); return; }
     case 'license-refresh': return loadLicense(true);
     case 'rp-grab': return rpGrab();
     case 'auto-calib': return rpCalibrate();
@@ -3130,9 +3137,18 @@ function validateTaskForm() {
   return !bad;
 }
 /* 表单顶部一句人话摘要：改任何一项都立刻对应更新，不用滚到底看全貌 */
+function toggleTargetCta(box) {
+  const t = S.sel ? taskById(S.sel) : null;
+  const empty = !!t && !taskKw(t).length && !t.season && !t.craft;
+  let c = $('#setCta');
+  if (!empty) { if (c) c.remove(); return; }
+  if (c) return;
+  box.insertAdjacentHTML('afterend', '<div class="set-cta span2" id="setCta"><button type="button" class="btn primary" data-act="go-lib">' + ic('lib') + '去目标库挑一个目标</button><span class="hint">在目标库点「加入任务」就行，价格和数量回来再填。</span></div>');
+}
 function updateTaskSummary() {
   const box = $('#setSum');
   if (!box) return;
+  toggleTargetCta(box);
   const v = id => ($('#' + id) || {}).value || '';
   const num = id => Number(v(id)) || 0;
   const optTxt = id => { const s = $('#' + id); return s && s.value ? s.options[s.selectedIndex].text : ''; };
@@ -3565,7 +3581,7 @@ function paintTop(st) {
   b.dataset.act = running ? 'stop' : 'start';
   b.dataset.api = running ? '/api/scheduler/stop' : '/api/scheduler/start';
   b.classList.toggle('stop', running);
-  $('#startTopTxt').textContent = running ? '停止抢购' : '启动抢购';
+  $('#startTopTxt').textContent = S.starting ? '检查中…' : (running ? '停止抢购' : '启动抢购');
   const kb = b.querySelector('.kbd');
   if (kb) kb.textContent = running ? (S.stopHotkey || '') : 'F7';
   if ($('#stopKbd')) $('#stopKbd').textContent = S.stopHotkey || '';
