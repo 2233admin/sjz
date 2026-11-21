@@ -798,6 +798,7 @@
   .rp-foot{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:8px}
   .region-row.dis{opacity:.45}
   .region-row.sel .rn{color:var(--accent)}
+.tname.unnamed{color:var(--text-3);font-style:normal}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
@@ -2576,6 +2577,21 @@ function visibleTasks() {
   });
 }
 
+function taskKw(t) {
+  const k = Array.isArray(t.keywords) ? t.keywords : (t.keywords ? String(t.keywords).split(/[,，\s]+/) : []);
+  return k.map(x => String(x).trim()).filter(Boolean);
+}
+function taskTitle(t, i) {
+  if (t.name) return t.name;
+  const kw = taskKw(t);
+  if (kw.length) return kw.slice(0, 2).join(' / ');
+  return '未命名任务 ' + ((i | 0) + 1);
+}
+function taskSub(t) {
+  const kw = taskKw(t);
+  if (kw.length) return kw.join(' · ');
+  return t.note || (t.name ? '还没填关键词，点开设置' : '还没设置目标，点开设置');
+}
 function taskRowsHtml(rows) {
   return rows.map((t, i) => {
     const st = t.status || 'pending';
@@ -2591,9 +2607,9 @@ function taskRowsHtml(rows) {
     const isSel = String(S.sel) === String(t.id);
     const isChecked = S.checked.has(String(t.id));
     return `<tr class="body-row${isSel ? ' sel' : ''}" data-id="${esc(t.id)}" tabindex="0" aria-selected="${isSel}">
-      <td><input type="checkbox" class="chk rowchk" data-id="${esc(t.id)}"${isChecked ? ' checked' : ''} aria-label="选择任务 ${esc(t.name)}"></td>
+      <td><input type="checkbox" class="chk rowchk" data-id="${esc(t.id)}"${isChecked ? ' checked' : ''} aria-label="选择任务 ${esc(taskTitle(t, i))}"></td>
       <td class="num" style="color:var(--text-3)">${i + 1}</td>
-      <td><div class="tname" title="${esc(t.name)}">${esc(t.name || '未命名')}</div><div class="tsub">${esc(t.keywords || t.note || '未设置关键词')}</div></td>
+      <td><div class="tname${t.name ? '' : ' unnamed'}" title="${esc(taskTitle(t, i))}">${esc(taskTitle(t, i))}</div><div class="tsub">${esc(taskSub(t))}</div></td>
       <td><span class="tag ${t.craft === '极品' ? 'gold' : 'mute'}">${esc(wearTxt)}</span></td>
       <td class="num">${esc(price)}</td>
       <td class="num">${quota}</td>
