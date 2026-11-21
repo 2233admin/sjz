@@ -1172,6 +1172,26 @@
   /* 导航与行悬停：黄铜滑条 */
   .tabs button,.side-tabs button{transition:color .2s,text-shadow .2s}
   .body-row{transition:background .18s,box-shadow .18s}
+  /* ---------- 下拉：原生 base-select（Chrome/Edge 135+、Safari 27），不支持的浏览器退回系统下拉 ---------- */
+  select{color-scheme:dark}
+  select option{background:#0a0d0b;color:#e6ebe6}
+  @supports (appearance: base-select){
+    select,select::picker(select){appearance:base-select}
+    select{background:rgba(15,247,150,.045);color:var(--text);border:1px solid rgba(15,247,150,.28);border-radius:0;padding:5px 8px;font:inherit;cursor:pointer;transition:border-color .15s,background .15s}
+    select:hover{border-color:rgba(15,247,150,.55)}
+    select:focus-visible,select:open{border-color:var(--accent);background:rgba(15,247,150,.1);outline:none}
+    select::picker-icon{color:var(--accent);transition:rotate .18s}
+    select:open::picker-icon{rotate:180deg}
+    select::picker(select){background:#080b0a;color:#e6ebe6;border:1px solid var(--accent);border-radius:0;padding:3px 0;margin-block:2px;
+      box-shadow:0 10px 28px rgba(0,0,0,.7),0 0 18px rgba(15,247,150,.2);max-height:min(300px,60vh);
+      opacity:0;transform:translateY(-4px);transition:opacity .14s,transform .14s,overlay .14s allow-discrete,display .14s allow-discrete}
+    select::picker(select):popover-open{opacity:1;transform:none}
+    @starting-style{select::picker(select):popover-open{opacity:0;transform:translateY(-4px)}}
+    select option{padding:6px 12px;font-size:12px;border-left:2px solid transparent;cursor:pointer;background:transparent}
+    select option:hover,select option:focus-visible{background:linear-gradient(90deg,rgba(15,247,150,.22),rgba(15,247,150,.05));color:#fff;border-left-color:var(--accent)}
+    select option:checked{color:var(--accent);font-weight:700}
+    select option::checkmark{color:var(--accent)}
+  }
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
