@@ -2384,7 +2384,7 @@ async function handleStart() {
   setGlobal('busy', '正在检查环境并启动抢购', '', '进行中');
   let r;
   try {
-    r = await api('/api/scheduler/start', {});
+    r = await api('/api/scheduler/start', {}, { timeout: 40000 });
   } catch (e) {
     await startFailed(e);
     return;
@@ -2410,7 +2410,7 @@ function startFailed(e) {
   showException(kind, title, desc, why, btn, perm ? null : 'exc-custom', null, null);
   toast(why, 'err');
   /* 逐项清单异步补上，先让用户看到真实原因，不干等 */
-  api('/api/preflight', { workflow: (S.config && S.config.workflow) || 'countdown' }, { allowFail: true }).then(pf => {
+  api('/api/preflight', { workflow: (S.config && S.config.workflow) || 'countdown' }, { allowFail: true, timeout: 40000 }).then(pf => {
     if (!pf || !S.localExc || S.localExc.kind !== kind) return;
     S.preflight = pf; renderChecks();
     S.localExc.checks = pf.checks || null;
@@ -4169,7 +4169,7 @@ async function runPreflight(opts) {
   const silent = !!(opts && opts.silent);
   if (!silent) setGlobal('busy', '正在做启动前检查', '会抓一张当前画面', '检查中');
   try {
-    const r = await api('/api/preflight', { workflow: (S.config && S.config.workflow) || 'countdown' }, { allowFail: true });
+    const r = await api('/api/preflight', { workflow: (S.config && S.config.workflow) || 'countdown' }, { allowFail: true, timeout: 40000 });
     preflight = r;
     S.preflight = r;
     renderChecks();
@@ -4272,6 +4272,13 @@ async function checkJob() {
   } catch (e) { toast(humanize(e), 'err'); }
 }
 async function excCustomFix() {
+  // 「先去处理问题」是关窗：问题清单已经列在弹窗里，再跑一遍检查只会把同一个窗再弹出来，
+  // 用户就被困在里面。要复查走「再检查一次」，或者修好后重新点「启动抢购」。
+  if (S.localExc && S.localExc.kind === 'start') {
+    clearException();
+    toast('先按提示处理，修好后再点「启动抢购」会重新检查');
+    return;
+  }
   const r = await runPreflight();
   if (r && r.ok) { clearException(); toast('检查通过，可以开始了', 'ok'); return; }
   if (S.localExc) {
