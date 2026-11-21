@@ -18,6 +18,7 @@
 往前跳又立刻失效。现在锚点同时记壁钟和单调时钟，TTL 走单调轴；壁钟只用
 来算 offset 本身，另加一条"壁钟被回拨"的显式失效判据。
 """
+import ipaddress
 import logging
 import math
 import os
@@ -36,6 +37,14 @@ _state = {"offset": 0.0, "delay": None, "server": None, "at": None,
 
 # 自动校时（server 的手动入口与后台循环共用这把锁，避免两路 NTP 同时跑）。
 sync_lock = threading.Lock()
+
+# ---- 本机代理 / 环回地址 ----
+# Clash、Mihomo 的 fake-ip 模式默认把域名解析到 198.18.0.0/15（RFC 2544
+# 基准测试保留段）。这些地址上的 NTP 应答是本机代理伪造的：既不能用来校时，
+# 也不是 DNS 投毒。遇到它们应当明确降级，而不是反复告警/重试。
+PROXY_FAKE_NETWORKS = tuple(ipaddress.ip_network(n) for n in (
+    "198.18.0.0/15", "127.0.0.0/8", "0.0.0.0/8", "::1/128", "fc00::/7"))
+PROXY_RETRY_S = 300.0          # 代理降级态的重试间隔：5 分钟一次，不刷屏
 
 # ---- 自动实时校准（2026-11 需求：不再让用户点按钮）----
 # 首轮在进程启动时自动跑；之后按 interval 持续重校（默认 45s，30~60s 档）。
@@ -267,7 +276,25 @@ def _sample_view(g):
             "offset": round(g["offset"], 6), "delay": round(g["delay"], 6)}
 
 
-def _fail(msg, errors, attempts, got):
+def _is_proxy_ip(ip):
+    """解析结果是否落在本机代理 fake-ip / 环回段（Clash、Mihomo 等）。"""
+    try:
+        addr = ipaddress.ip_address(str(ip).strip())
+    except (TypeError, ValueError):
+        return False
+    return any(addr.version == net.version and addr in net
+               for net in PROXY_FAKE_NETWORKS)
+
+
+def _proxy_message(hits):
+    """代理降级的统一说明：说清是 fake-ip，不是投毒。"""
+    ips = ", ".join(sorted({str(ip) for ip in hits.values()}))
+    return ("校时不可用：走代理（NTP 域名解析到本机 fake-ip/环回 "
+            f"{ips}），已用系统时间；这是 Clash/Mihomo 的 fake-ip，"
+            "不是 DNS 投毒，后台每 5 分钟最多试一次")
+
+
+def _fail(msg, errors, attempts, got, proxy=False):
     """统一构造失败返回：保留上次生效的校时状态，只更新错误说明。"""
     _note_error(msg)
     with _lock:
@@ -276,7 +303,7 @@ def _fail(msg, errors, attempts, got):
         server = _state.get("server")
     return {"ok": False, "error": msg, "tried": errors, "offset": cur,
             "delay": delay, "server": server, "attempts": attempts,
-            "degraded": False,
+            "degraded": False, "proxy": bool(proxy),
             "samples": [_sample_view(g) for g in got]}
 
 
@@ -314,8 +341,21 @@ def sync(servers=None, samples=4, timeout=2.0, allow_large_offset=None,
     got = []
     errors = []
     attempts = 0
+    # 先一次性解析，代理 fake-ip 直接拦下：NTP 是 UDP，系统代理设置管不到，
+    # 对 198.18.x 发包只会白等（实测一轮 13s）。全部是 fake-ip 时立即降级。
+    resolved = {host: _resolve_ip(host) for host in servers}
+    proxy_hits = {h: ip for h, ip in resolved.items()
+                  if ip and _is_proxy_ip(ip)}
+    if proxy_hits and len(proxy_hits) == len(servers):
+        return _fail(_proxy_message(proxy_hits),
+                     [f"{h}: 解析到本机代理 fake-ip {ip}，跳过"
+                      for h, ip in proxy_hits.items()],
+                     0, [], proxy=True)
     for host in servers:
-        ip = _resolve_ip(host)
+        ip = resolved.get(host)
+        if host in proxy_hits:
+            errors.append(f"{host}: 解析到本机代理 fake-ip {ip}，跳过")
+            continue
         ok_here = 0
         fails = 0
         # 目标仍是每台 samples 个**有效**样本：丢包不占样本名额，只占重试
@@ -341,6 +381,14 @@ def sync(servers=None, samples=4, timeout=2.0, allow_large_offset=None,
                 # 放弃整台。退避随连续失败次数翻倍，封顶 BACKOFF_MAX_S。
                 time.sleep(min(BACKOFF_MAX_S, BACKOFF_BASE_S * 2 ** (fails - 1)))
 
+    # 万一应答里的 IP 仍是代理地址（解析与发包之间被切换），这些样本直接丢弃：
+    # 它们不可能是真实 NTP 服务器的应答。
+    real_got = [s for s in got
+                if not (s.get("ip") and _is_proxy_ip(s.get("ip")))]
+    if got and not real_got:
+        return _fail(_proxy_message({s["server"]: s["ip"] for s in got}),
+                     errors, attempts, got, proxy=True)
+    got = real_got
     if not got:
         return _fail("所有 NTP 服务器都不通或应答不可信", errors, attempts, got)
 
@@ -430,7 +478,7 @@ def sync(servers=None, samples=4, timeout=2.0, allow_large_offset=None,
             "server": best["server"], "stratum": best["stratum"],
             "at": stamp, "samples": samples_out, "tried": errors,
             "attempts": attempts, "independent": len(indep),
-            "degraded": degraded, "warning": warning}
+            "degraded": degraded, "warning": warning, "proxy": False}
 
 
 def _drift_estimate(new_offset, now_mono):
@@ -631,6 +679,7 @@ class _AutoSync:
         self._window_probe = None
         self._failures = 0
         self._last_error = ""
+        self._proxy = False
         self._last_trigger = "startup"
         self._last_attempt_at = None
         self._last_duration_ms = 0.0
@@ -706,7 +755,15 @@ class _AutoSync:
             if res.get("ok"):
                 self._failures = 0
                 self._last_error = ""
+                self._proxy = False
+            elif res.get("proxy"):
+                # 走代理是环境限制，不是「连续失败」；别让退避越滚越大。
+                self._failures = 0
+                self._last_error = str(res.get("error")
+                                       or "校时不可用：走代理")
+                self._proxy = True
             else:
+                self._proxy = False
                 self._failures += 1
                 self._last_error = str(res.get("error") or "校准失败")
 
@@ -733,19 +790,28 @@ class _AutoSync:
             next_mono = self._next_mono
             next_wait = self._next_wait_s
             trigger = self._last_trigger
+            proxy = self._proxy
         cal = _calibration_view()
         now_mono = time.monotonic()
         next_in = (max(0.0, next_mono - now_mono)
                    if next_mono is not None else None)
         cal_ok = bool(cal.get("calibrated"))
         source = "ntp" if cal_ok else "system"
+        if proxy:
+            label = "仅系统时间（走代理，校时不可用）"
+        elif cal_ok:
+            label = "网络校时"
+        else:
+            label = "仅系统时间"
         return {
             "enabled": bool(enabled),
             "running": bool(running),
             "state": state,
             "calibrated": cal_ok,
             "source": source,
-            "source_label": "网络校时" if cal_ok else "仅系统时间",
+            "source_label": label,
+            "proxy": bool(proxy),
+            "detail": ("校时不可用：走代理，已用系统时间" if proxy else ""),
             "offset_ms": cal.get("offset_ms", 0.0),
             "drift_ppm": cal.get("drift_ppm", 0.0),
             "samples": cal.get("samples", 0),
@@ -791,20 +857,30 @@ class _AutoSync:
                 duration = (time.monotonic() - t0) * 1000.0
                 with self._lock:
                     self._last_duration_ms = round(duration, 1)
+                    proxy = bool(res.get("proxy"))
                     if res.get("ok"):
                         self._failures = 0
                         self._last_error = ""
                         wait_s = self._interval_s
+                    elif proxy:
+                        # 代理 fake-ip：低频重试（5 分钟），且只在刚进入该状态
+                        # 时通知一次，避免每轮都往日志里刷同一句。
+                        self._failures = 0
+                        self._last_error = str(res.get("error")
+                                               or "校时不可用：走代理")
+                        wait_s = PROXY_RETRY_S
                     else:
                         self._failures += 1
                         self._last_error = str(res.get("error") or "校准失败")
                         wait_s = _retry_delay(self._failures, self._interval_s)
+                    repeat_proxy = proxy and self._proxy
+                    self._proxy = proxy
                     self._state = "waiting"
                     self._next_wait_s = wait_s
                     self._next_mono = time.monotonic() + wait_s
                     notify = self._notify
                 self._first_ready.set()
-                if notify is not None:
+                if notify is not None and not repeat_proxy:
                     try:
                         notify(res, trigger)
                     except Exception:         # noqa: BLE001

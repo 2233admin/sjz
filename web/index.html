@@ -2284,6 +2284,7 @@ async function boot() {
       return;
     }
     if (cfg && cfg.ok !== false) S.config = cfg;
+    if ($('#sbVer')) $('#sbVer').textContent = 'v' + ((S.config && S.config.version) || '—');
     bootDone();
     setGlobal('ok', '控制台已就绪', '正在读取任务与开关', '待命');
     await Promise.all([loadSwitches(), loadTasks(), loadSkins(), loadHotkey(), loadTimesync(), loadLicense()]);
@@ -3972,7 +3973,7 @@ function renderJournal() {
   if (scroll) scroll.hidden = false;
   if (st) st.innerHTML = '';
   if (body) body.innerHTML = log.map(l => {
-    const v = journalView(l.msg);
+    const v = journalView(l.msg, l.level);
     const detail = v.raw ? `<details class="j-tech"><summary>技术细节</summary><pre>${esc(v.raw)}</pre></details>` : '';
     return `<tr class="body-row"><td class="num" style="color:var(--text-3)">${esc(l.t || '')}</td><td><span class="tag ${l.level === 'error' ? 'bad' : l.level === 'warn' ? 'warn' : 'mute'}">${levels[l.level] || '一般'}</span></td><td style="white-space:normal"><div>${esc(v.text)}</div>${detail}</td></tr>`;
   }).join('');
@@ -4037,9 +4038,12 @@ function jMaybeAutoRead() {
   if (!jDwellSince) jDwellSince = Date.now();
   if (Date.now() - jDwellSince >= 2000) jMarkRead();
 }
-function journalView(msg) {
+function journalView(msg, level) {
   const raw = String(msg == null ? '' : msg);
-  const hasTech = /Traceback|FileNotFoundError|PermissionError|RuntimeError|TimeoutError|ConnectionError|OSError|WinError|\\|\/[A-Za-z0-9_.-]+\.(py|json|png|log|jsonl)/i.test(raw);
+  /* 只有 error 级才转成「程序内部出错了」。info/warn 里出现路径是正常信息
+     （例如 OCR 二级加速没装、已降级为内置识别），以前因为正则里匹配任意
+     反斜杠也被当成内部错误，信息条把用户吓一跳。 */
+  const hasTech = level === 'error' && /Traceback|FileNotFoundError|PermissionError|RuntimeError|TimeoutError|ConnectionError|OSError|WinError|\\|\/[A-Za-z0-9_.-]+\.(py|json|png|log|jsonl)/i.test(raw);
   if (!hasTech) return { text: raw, raw: null };
   let text;
   if (/FileNotFoundError|WinError 2/.test(raw)) {

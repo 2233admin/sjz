@@ -245,7 +245,9 @@
     if (days === undefined && r.license && typeof r.license === 'object') {
       days = pick(r.license, ['days', 'remaining_days', 'days_left']);
     }
-    if (typeof days === 'number' && isFinite(days)) {
+    if (r.license_perpetual === true) {
+      setTxt('license', '授权 · 永久');
+    } else if (typeof days === 'number' && isFinite(days)) {
       setTxt('license', days > 0 ? '授权 ' + days + ' 天' : '授权已到期');
     } else {
       setTxt('license', days ? ('授权 ' + days) : '授权 —');
@@ -305,6 +307,21 @@
     if (retryTimer) { clearTimeout(retryTimer); retryTimer = 0; }
   }
 
+  var lastSizeSync = 0;
+  /* 自愈：页面状态是「展开」但窗口只有紧凑高度（宿主 create_window 返回后
+     会强制 resize 一次，pywebviewready 也可能早于监听器注册而错过），
+     每秒对一次账，最多 1.2s 发一次，别把 IPC 打满。 */
+  function syncSizeIfNeeded(api) {
+    if (!api || typeof api.overlay_size !== 'function') return;
+    if (Date.now() - lastSizeSync < 1200) return;
+    var h = window.innerHeight || 0;
+    var on = isExpanded();
+    var mism = on ? h < 200 : h > 200;
+    if (!mism) return;
+    lastSizeSync = Date.now();
+    try { Promise.resolve(api.overlay_size(on)).catch(function () {}); } catch (e) { /* 老宿主没有就算了 */ }
+  }
+
   function tick() {
     var api = bridge();
     var hasApi = !!(api && typeof api.get_overlay_state === 'function');
@@ -316,6 +333,7 @@
       if (hostPresent()) markWaiting(); else markOffline();
       return;
     }
+    syncSizeIfNeeded(api);
     /* 接口刚刚注册：立刻试一次，不等退避窗口 */
     if (!hadApi) { hadApi = true; retryAt = 0; backoff = 1000; clearRetry(); }
     if (Date.now() < retryAt) return;
@@ -358,8 +376,15 @@
     hadApi = false;
     retryAt = 0;
     backoff = 1000;
-    /* 宿主就绪后补一次尺寸同步（页面可能在接口注册前就已经恢复过展开态） */
-    applyExpanded(isExpanded(), false);
+    /* 宿主就绪后补尺寸同步：页面可能在接口注册前就恢复过展开态，
+       而且宿主 create_window 返回后会强制 resize 成紧凑高度，
+       所以在这里按当前状态重发几次，直到高度和页面状态一致 */
+    var tries = 0;
+    (function syncSize() {
+      tries += 1;
+      applyExpanded(isExpanded(), false);
+      if (tries < 3) setTimeout(syncSize, tries === 1 ? 600 : 900);
+    })();
     tick();
   });
 

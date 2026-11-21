@@ -808,7 +808,8 @@ class WinCtl:
                 return False
             # 走 SW_SHOWNOACTIVATE：pywebview 的 show() 会 Activate()，展开瞬间抢前台
             prev_fg = _get_foreground()
-            _place_overlay(ov)
+            if not _OVERLAY_HANDLE.get("placed"):
+                _place_overlay(ov)
             _show_overlay_noactivate(ov)
             _restore_foreground(prev_fg, _find_hwnd(OVERLAY_TITLE, tries=20, delay=0.05))
             ov._shown_flag = True
@@ -922,37 +923,131 @@ def _work_area():
         return 0, 0, 1920, 1080
 
 
-def _place_overlay(ov=None):
-    """贴右上角，留 16px 边距，不越界。"""
+def _overlay_pos_path():
+    return os.path.join(APPDIR, "overlay_pos.json")
+
+
+def _screen_sig():
+    x, y, aw, ah = _work_area()
+    return f"{x},{y},{aw}x{ah}"
+
+
+def _load_overlay_pos():
+    """读上次拖好的位置；分辨率/工作区变了就当没存过。"""
     try:
-        x, y, aw, ah = _work_area()
-        x = x + aw - OVERLAY_W - 16
-        y = y + 16
-        ov = ov or _OVERLAY_HANDLE.get("win")
+        import json
+        with open(_overlay_pos_path(), "r", encoding="utf-8") as f:
+            d = json.load(f) or {}
+        if str(d.get("screen") or "") != _screen_sig():
+            return None
+        x, y = int(d["x"]), int(d["y"])
+        x0, y0, aw, ah = _work_area()
+        if not (x0 - 8 <= x <= x0 + aw - 48 and y0 - 8 <= y <= y0 + ah - 32):
+            return None
+        return x, y
+    except Exception:                         # noqa: BLE001
+        return None
+
+
+def _save_overlay_pos(x, y):
+    try:
+        import json
+        tmp = _overlay_pos_path() + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"x": int(x), "y": int(y), "screen": _screen_sig()}, f)
+        os.replace(tmp, _overlay_pos_path())
+    except Exception as e:                    # noqa: BLE001
+        _log(f"!! 悬浮窗位置保存失败：{type(e).__name__}: {e}")
+
+
+def _place_overlay(ov=None, force_default=False):
+    """只在启动/分辨率变化时定位：优先用用户拖过的位置，否则贴右上角。"""
+    h = _OVERLAY_HANDLE
+    if h.get("placed") and not force_default:
+        return False
+    try:
+        pos = None if force_default else _load_overlay_pos()
+        if pos is None:
+            x0, y0, aw, ah = _work_area()
+            x, y = x0 + aw - OVERLAY_W - 16, y0 + 16
+        else:
+            x, y = pos
+        ov = ov or h.get("win")
         if ov is not None:
             ov.move(max(x, 0), max(y, 0))
-            _log(f"悬浮窗已定位 ({max(x, 0)}, {max(y, 0)}) 工作区 {aw}x{ah}")
+            h["placed"] = True
+            h["pos"] = (max(x, 0), max(y, 0))
+            _log(f"悬浮窗已定位 ({max(x, 0)}, {max(y, 0)}) work={_screen_sig()}")
             return True
     except Exception as e:                    # noqa: BLE001
         _log(f"!! 悬浮窗定位失败：{type(e).__name__}: {e}")
     return False
 
 
-_OVERLAY_HANDLE = {"win": None}
+_OVERLAY_HANDLE = {"win": None, "hwnd": None, "placed": False, "pos": None}
+_OVERLAY_STOP = threading.Event()
+
+
+def _overlay_pos_watch(stop_evt):
+    """记住用户拖动后的位置；工作区变化（换分辨率/DPI）时只重贴一次。"""
+    last_sig = _screen_sig()
+    last = _OVERLAY_HANDLE.get("pos")
+    while not stop_evt.is_set():
+        stop_evt.wait(1.0)
+        try:
+            hwnd = _OVERLAY_HANDLE.get("hwnd")
+            if not hwnd:
+                continue
+            sig = _screen_sig()
+            if sig != last_sig:
+                last_sig = sig
+                _OVERLAY_HANDLE["placed"] = False
+                _place_overlay()
+                last = _OVERLAY_HANDLE.get("pos")
+                continue
+            if not ctypes.windll.user32.IsWindowVisible(
+                    ctypes.c_void_p(int(hwnd))):
+                continue
+            wr = _window_rect(hwnd)
+            if not wr:
+                continue
+            pos = (int(wr["x"]), int(wr["y"]))
+            if last is None or pos != last:
+                last = pos
+                _OVERLAY_HANDLE["pos"] = pos
+                _save_overlay_pos(*pos)
+        except Exception:                     # noqa: BLE001
+            pass
 
 
 def _resize_overlay(expanded):
-    """紧凑 ↔ 展开：只改高度，右边缘位置不变（JS 改不了 WebView 窗口尺寸）。"""
+    """紧凑 ↔ 展开：只改高度，左上角不动（JS 改不了 WebView 窗口尺寸）。
+
+    不能直接用 pywebview 的 ov.resize()：它内部的 SetWindowPos 没带
+    SWP_NOACTIVATE，展开瞬间会把前台抢走。这里自己带 NOACTIVATE 改尺寸。
+    """
     ov = _OVERLAY_HANDLE.get("win")
     if ov is None:
         return False
     h = OVERLAY_H_EXP if expanded else OVERLAY_H
+    hwnd = _OVERLAY_HANDLE.get("hwnd")
+    try:
+        wr = _window_rect(hwnd) if hwnd else None
+        if wr:
+            scale = (wr["w"] / float(OVERLAY_W)) if wr["w"] else 1.0
+            ctypes.windll.user32.SetWindowPos(
+                ctypes.c_void_p(int(hwnd)), None,
+                int(wr["x"]), int(wr["y"]),
+                int(OVERLAY_W * scale), int(h * scale),
+                _SWP_NOZORDER | 0x0010)        # NOZORDER | NOACTIVATE
+            return True
+    except Exception as e:                    # noqa: BLE001
+        _log(f"!! 悬浮窗改尺寸失败：{type(e).__name__}: {e}")
     try:
         ov.resize(OVERLAY_W, h)
     except Exception as e:                    # noqa: BLE001
         _log(f"!! 悬浮窗改尺寸失败：{type(e).__name__}: {e}")
         return False
-    _place_overlay(ov)
     return True
 
 
@@ -1058,6 +1153,40 @@ def _apply_noactivate(hwnd, topmost=True):
         return True
     except Exception as e:                    # noqa: BLE001
         _log(f"!! 悬浮窗样式设置失败：{type(e).__name__}: {e}")
+    return False
+
+
+def _overlay_no_white(hwnd):
+    """窗体底色改深色 + 同色色键透明：圆角外面不再露白底/白线。
+
+    pywebview 的 transparent=True 只把 WebView2 的 DefaultBackgroundColor 设成
+    透明，托管窗体自己的 BackColor 仍是默认白 —— 页面 body 透明时露出的就是
+    那层白。这里把窗体底色和 TransparencyKey 设成同一个极深色，像素级挖掉。
+    """
+    try:
+        import clr
+        clr.AddReference("System.Windows.Forms")
+        from System import IntPtr as _IP
+        from System.Windows.Forms import Control
+        from System.Drawing import Color
+        ctl = Control.FromHandle(_IP(int(hwnd)))
+        form = ctl.FindForm() if ctl is not None else None
+        if form is None:
+            return False
+        key = Color.FromArgb(0x11, 0x15, 0x1c)
+        form.BackColor = key
+        form.TransparencyKey = Color.Empty
+        # Win11：窗口本体圆角（DWMWA_WINDOW_CORNER_PREFERENCE=33, DWMWCP_ROUND=2）
+        try:
+            val = ctypes.c_int(2)
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                ctypes.c_void_p(int(hwnd)), 33, ctypes.byref(val), 4)
+        except Exception:                     # noqa: BLE001
+            pass
+        _log("悬浮窗底色已改深色 + DWM 圆角（去白框）")
+        return True
+    except Exception as e:                    # noqa: BLE001
+        _log(f"!! 悬浮窗去白框失败：{type(e).__name__}: {e}")
     return False
 
 
@@ -1438,7 +1567,9 @@ def _create_overlay(ctl, base_url=""):
 
     hwnd = _find_hwnd(OVERLAY_TITLE, tries=100, delay=0.02)
     if hwnd:
+        _OVERLAY_HANDLE["hwnd"] = hwnd
         _apply_noactivate(hwnd)
+        _overlay_no_white(hwnd)
         _log(f"悬浮窗样式已就绪（NOACTIVATE+TOOLWINDOW）hwnd={hwnd}")
     # 真机实测：transparent 窗口初建时会被 MinimumSize 之类压成 288x100，
     # 建好后显式 resize 一次才是请求的 304x137
@@ -1447,6 +1578,12 @@ def _create_overlay(ctl, base_url=""):
     except Exception as e:                     # noqa: BLE001
         _log(f"!! 悬浮窗初始尺寸设置失败：{type(e).__name__}: {e}")
     _place_overlay(ov)
+    try:
+        threading.Thread(target=_overlay_pos_watch,
+                         args=(_OVERLAY_STOP,), daemon=True,
+                         name="overlay-pos").start()
+    except Exception:                         # noqa: BLE001
+        pass
 
     # http 被鉴权拦下（403）时页面里 0 个脚本：退回 file:// / 内联
     if mode == "url":

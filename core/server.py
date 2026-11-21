@@ -1416,6 +1416,12 @@ def _on_auto_sync_result(res, trigger):
         if res.get("ok"):
             _scheduler.note(f"{where}校时完成：{res.get('server') or 'NTP'} "
                             f"{float(res.get('offset') or 0) * 1000:+.0f}ms", "info")
+        elif res.get("proxy"):
+            # 本机代理把 NTP 域名解析成 fake-ip：明确说「不可用 + 已用系统时间」，
+            # 不写「投毒」，也不按失败退避刷屏（后台 5 分钟才试一次）。
+            _scheduler.note(f"{where}校时不可用：走代理（NTP 域名被解析到本机 "
+                            "fake-ip/环回），已用系统时间；这不是 DNS 投毒",
+                            "warn")
         else:
             _scheduler.note(f"{where}校时失败：{res.get('error') or '原因未知'}"
                             "（已退回系统时间，后台自动重试）", "warn")
@@ -2098,6 +2104,7 @@ def overlay_state():
             "task_index": 0, "task_total": 0, "avg_match_ms": None,
             "next_retry_s": None, "next_window_s": None,
             "license_remaining_s": 0.0, "license_days": 0,
+            "license_perpetual": False, "license_status": "",
             "hotkey": "F8", "errors": [],
             # 迷你控制条：进度 + 可即时修改的必要设置
             "bought": 0, "attempts": 0, "target": 1,
@@ -2228,10 +2235,14 @@ def overlay_state():
         pass
 
     try:
-        snap["license_remaining_s"] = float(
-            (_license.summary().get("remaining_s") or 0.0))
+        lic = _license.summary() or {}
+        snap["license_remaining_s"] = float(lic.get("remaining_s") or 0.0)
         snap["license_days"] = int(snap["license_remaining_s"] // 86400) \
             if snap["license_remaining_s"] > 0 else 0
+        snap["license_status"] = str(lic.get("status") or "")
+        # 永久卡：lease_remaining_s 为 None 且判定 ok（license.py 的 perpetual 分支）
+        snap["license_perpetual"] = bool(
+            lic.get("status") == "ok" and lic.get("lease_remaining_s") is None)
     except Exception:                         # noqa: BLE001
         pass
 

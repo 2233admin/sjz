@@ -41,10 +41,10 @@
     --panel-a:rgba(17,21,28,.94);   /* = --surface #11151c，alpha .94（透明圆角用） */
   }
   *{box-sizing:border-box}
-  html,body{width:100%;height:100%;margin:0;overflow:hidden;background:transparent}
+  html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--surface)}
   body{
     font:13px/1.55 var(--font-ui);color:var(--text);
-    padding:5px;user-select:none;-webkit-font-smoothing:antialiased;
+    padding:0;user-select:none;-webkit-font-smoothing:antialiased;
   }
   button{background:none;border:0;padding:0;cursor:pointer;color:inherit;font:inherit}
   :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -52,8 +52,8 @@
   /* 面板：主界面 .panel 的同一组值 —— surface / line / r-lg / shadow-1 */
   .ov{
     display:flex;flex-direction:column;gap:2px;height:100%;padding:6px 9px;
-    background:var(--panel-a);border:1px solid var(--line);border-radius:var(--r-lg);
-    box-shadow:var(--shadow-1);overflow:hidden;
+    background:var(--panel-a);border:1px solid var(--line);border-radius:12px;
+    box-shadow:none;overflow:hidden;
   }
   .bar{display:flex;align-items:center;gap:6px;flex:0 0 auto;cursor:pointer}
   /* 状态徽标：最显眼的一层，五档色全部取主界面同一组令牌 */

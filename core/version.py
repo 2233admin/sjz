@@ -10,7 +10,7 @@
     python tools/version_sync.py --write
 """
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 
 # 兼容两种导入习惯（`from core.version import APP_VERSION` / `__version__`）
 __version__ = APP_VERSION
