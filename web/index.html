@@ -1042,7 +1042,6 @@
 
   /* 屏上的字由 canvas 矢量描边绘制；DOM 文字保留布局与读屏，但不显示 */
   .globalbar{flex:0 0 34px !important;height:34px !important;align-items:center !important;padding:0 14px !important}
-  .globalbar [data-vs]{color:transparent !important;text-shadow:none !important}
   .globalbar .g-state{border-color:rgba(15,247,150,.5)}
   .globalbar .g-ico{margin-top:0}
   .scope-box{position:relative;height:104px;margin:0 0 10px;background:#050b08;border:1px solid rgba(15,247,150,.35);box-shadow:inset 0 0 22px rgba(15,247,150,.1)}
@@ -1052,6 +1051,13 @@
   .vs-big{font-size:22px;font-weight:800;letter-spacing:.12em}
   .vs-mid{font-size:12px;font-family:var(--font-num);letter-spacing:.04em}
   .vs-live{font-size:11px;font-family:var(--font-num);letter-spacing:.06em;margin-top:2px}
+
+  /* 状态栏：文字恢复正常显示并放大，示波器格线留作底纹 */
+  .globalbar{font-size:13px !important}
+  .globalbar .g-txt{font-size:13.5px;color:#d6ffec;text-shadow:0 0 6px rgba(15,247,150,.35)}
+  .globalbar .g-detail{font-size:12px;color:rgba(214,255,236,.7)}
+  .globalbar .g-state{font-size:12px}
+  .globalbar .g-clock{font-size:12.5px}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
@@ -1194,11 +1200,11 @@ body.mini #miniBar{
 <div class="globalbar" role="status" aria-live="polite">
   <canvas class="vscope" aria-hidden="true"></canvas>
   <span class="g-ico" id="gIco"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.6"/><path d="M8 4.8V8l2.2 1.4"/></svg></span>
-  <span class="g-scroll"><span class="g-txt" id="gText" data-vs>正在连接本地控制台</span></span>
-  <span class="g-detail" id="gDetail" data-vs></span>
+  <span class="g-scroll"><span class="g-txt" id="gText">正在连接本地控制台</span></span>
+  <span class="g-detail" id="gDetail"></span>
   <span class="g-right">
-    <span class="g-state" id="gState" data-vs>连接中</span>
-    <span class="g-clock num" id="gClock" data-vs>--:--:--</span>
+    <span class="g-state" id="gState">连接中</span>
+    <span class="g-clock num" id="gClock">--:--:--</span>
   </span>
   <span class="g-bar" id="gBar"></span>
 </div>
