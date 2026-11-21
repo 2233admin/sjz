@@ -71,6 +71,8 @@ class FakeMarket:
     #: 确认后的结局：success / sold_out / insufficient
     outcome: str = "success"
     balance: int = 100000
+    #: True = 点卡片只是选中（详情面板出现在右边，列表还在），倒计时流程就是这样用的
+    select_keeps_list: bool = False
     page: str = "list"
     selected: int | None = None
     clicks: list = field(default_factory=list)      # 每次点击的判定账
@@ -96,8 +98,13 @@ class FakeMarket:
             for i, _c in enumerate(self.cards):
                 x0, y0, x1, y1 = self.card_box(i)
                 if x0 <= x <= x1 and y0 <= y <= y1:
-                    hit, self.selected, self.page = f"card:{i}", i, "detail"
+                    hit, self.selected = f"card:{i}", i
+                    if not self.select_keeps_list:
+                        self.page = "detail"
                     break
+            if (hit is None and self.select_keeps_list and self.selected is not None
+                    and _inside(BUY_BTN, x, y)):
+                hit, self.page = "buy", "confirm"
         elif self.page == "detail":
             if _inside(BUY_BTN, x, y):
                 hit, self.page = "buy", "confirm"
@@ -136,6 +143,8 @@ class FakeMarket:
             d.rectangle([0, y, W, y + 4], fill=(v, v + 8, v + 10))
         if self.page == "list":
             self._draw_list(d)
+            if self.select_keeps_list and self.selected is not None:
+                self._draw_detail(d, self.cards[self.selected])
         else:
             if self.selected is not None:
                 self._draw_detail(d, self.cards[self.selected])

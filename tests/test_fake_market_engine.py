@@ -138,3 +138,47 @@ def test_engine_never_clicks_unreadable_price_or_wrong_name_card(monkeypatch):
             assert c["hit"] in ("card:2", "card:3"), \
                 f"引擎点了不合格的卡：{c}"
     assert m.purchases and m.purchases[0].price in (2050, 2100)
+
+
+# ------------------------------------------------------------ 倒计时流程（_countdown_prepare）
+
+def _cd_words(sec):
+    ws = ["0", "分", str(sec), "秒", "后", "解", "锁", "购", "买"]
+    return [{"text": t, "x": i * 20, "y": 0, "w": 18, "h": 16} for i, t in enumerate(ws)]
+
+
+class _CdNav(_Nav):
+    def __init__(self, *a, **k):
+        self.page = 1
+
+    def ons_page(self):
+        return self.page
+
+
+def test_countdown_sweep_clicks_the_first_two_cards_and_picks_earliest(monkeypatch):
+    """倒计时流程：前两张卡各点一次读倒计时，再点最早解锁那件。点击坐标由引擎算。"""
+    secs = {0: 300, 1: 45, 2: 90, 3: 90}          # 卡 1 最早解锁
+    m = FakeMarket(select_keeps_list=True)
+    screen, mouse = FakeScreen(m), MarketMouse(m)
+    e = Engine()
+    e._stop = threading.Event()
+    e._target_hwnd = 1
+    e._say = lambda msg, level="info": None
+    e._failsafe = lambda on: None
+    monkeypatch.setattr(eng_mod, "Navigator", _CdNav)
+    monkeypatch.setattr(eng_mod, "Keyboard", lambda *a, **k: None)
+    monkeypatch.setattr(e, "_ocr_clock",
+                        lambda scr, px: _cd_words(secs[m.selected]))
+    monkeypatch.setattr(e, "_read_serial", lambda scr: f"S{m.selected}")
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+    cfg = _Cfg({"min_price": 1000, "max_price": 3000})
+    cfg["regions"]["clock"] = {"x": 0.8, "y": 0.79, "w": 0.1, "h": 0.05}
+    target = e._countdown_prepare(cfg, screen, mouse, [])
+
+    hits = [c["hit"] for c in m.clicks]
+    assert None not in hits, f"引擎有点击没落在任何卡片上：{m.clicks}"
+    assert set(hits[:2]) == {"card:0", "card:1"}, f"前两下应点前两张卡：{hits}"
+    assert target is not None and target["sec"] == 45
+    assert target["serial"] == "S1" and hits[-1] == "card:1", \
+        f"最后一下应落在最早解锁的卡 1 上：{hits}"
