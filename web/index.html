@@ -746,6 +746,24 @@
     .settings-grid{grid-template-columns:170px minmax(0,1fr)}
     .header-extra{display:none}
   }
+  @media (max-width:900px){
+    .page{overflow-y:auto}
+    .run-grid{flex:0 0 auto;grid-template-columns:minmax(0,1fr)}
+    .tasks-panel{max-height:62vh;min-height:300px}
+    .side{overflow:visible}
+    #panelTaskSet .panel-foot{bottom:0}
+    .statcards{flex:0 0 auto}
+  }
+  @media (max-width:700px){
+    .topbar{flex-wrap:wrap;height:auto;flex:0 0 auto;row-gap:6px;padding-top:6px;padding-bottom:6px}
+    .tabs{order:3;flex:1 1 100%;margin-left:0;overflow-x:auto}
+    .health{margin-left:auto}
+    #btnDensity{display:none}
+  }
+  @media (max-width:560px){
+    .statcards{grid-template-columns:minmax(0,1fr)}
+    .taskbar select{max-width:none;flex:1 1 110px}
+  }
   @media (prefers-reduced-motion:reduce){
     *{transition-duration:0s!important;animation-duration:0s!important}
     .skel{background:#242322}
