@@ -770,7 +770,7 @@
   .set-sum{transition:opacity .15s}
   .chip{transition:color var(--dur)}
   /* ---------- 自检：沉底一行，正常只露状态点，有问题才展开报警 ---------- */
-  #statCards{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:0 22px;border:0;border-top:1px solid var(--line);padding:6px 2px 0}
+  #statCards{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:2px 22px;border:0;border-top:1px solid var(--line);padding:5px 2px 0;align-items:center}
   #statCards .scard{border:0;padding:2px 0;gap:7px;background:none;flex:0 0 auto}
   #statCards .scard:first-child,#statCards .scard:nth-child(odd){padding-left:0}
   #statCards .scard + .scard{border:0}
@@ -782,10 +782,8 @@
   #statCards .scard.warn .sc-v,#statCards .scard.bad .sc-v{font-weight:650}
   #statCards .scard.warn .sc-v{color:var(--warn)}
   #statCards .scard.bad .sc-v{color:var(--bad)}
-  #statCards .scard.warn .sc-s,#statCards .scard.bad .sc-s{display:inline;color:var(--text-2)}
-  #statCards .scard.warn .sc-act,#statCards .scard.bad .sc-act{display:inline-flex}
-  #statCards .scard.warn,#statCards .scard.bad{flex:1 1 100%;padding:5px 0}
-  #statCards .scard.warn .sc-body,#statCards .scard.bad .sc-body{flex:1 1 auto;flex-wrap:wrap}
+  #statCards .scard.warn .sc-act,#statCards .scard.bad .sc-act{display:inline-flex;height:20px;padding:0 7px;font-size:10.5px}
+  #statCards .scard.warn .sc-v::after,#statCards .scard.bad .sc-v::after{content:none}
   @media (max-width:1560px){
     .brand-t em{display:none}
     .plan{flex-basis:190px}
@@ -3397,7 +3395,7 @@ function syncAutoClock() {
 function statCard(kind, key, title, value, sub, act, apiPath, actText) {
   const dot = kind === 'ok' ? 'ok' : kind === 'warn' ? 'warn' : kind === 'bad' ? 'bad' : '';
   const btn = act ? `<button class="btn sm sc-act" data-act="${act}"${apiPath ? ` data-api="${apiPath}"` : ''}>${actText}</button>` : '';
-  return `<div class="scard ${dot}">
+  return `<div class="scard ${dot}" title="${String(sub).replace(/"/g, '&quot;')}">
     <div class="sc-ico">${iconOf(key)}</div>
     <div class="sc-body"><div class="sc-k">${title}</div><div class="sc-v">${value}</div><div class="sc-s">${sub}</div></div>
     <span class="sc-dot"></span>${btn}
