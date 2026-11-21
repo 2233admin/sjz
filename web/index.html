@@ -1217,6 +1217,21 @@
   @keyframes secIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
   #setWorkflow{display:grid !important;grid-template-columns:1fr !important}
   #setWorkflow button{justify-content:flex-start !important;padding:7px 12px !important;text-align:left}
+  /* ---------- 其他页：统计卡图标 + 分析页压缩 ---------- */
+  .stat .k .ic{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-right:5px;vertical-align:-2px;color:var(--accent)}
+  @media (min-width:700px){#page-ana .ana-grid{grid-template-columns:minmax(0,1.5fr) minmax(220px,1fr) !important}}
+  #page-ana .chartbox{min-height:150px;padding:8px 14px}
+  #page-ana .chart{height:110px}
+  #page-ana .dist{gap:6px}
+  /* ---------- 设置页：长分组改页签 ---------- */
+  .pane-tabs{display:flex;gap:0;margin:0 0 10px;border-bottom:1px solid var(--brass-dim);overflow:hidden}
+  .pane-tabs button{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px 8px;font:inherit;font-size:12px;font-weight:600;color:var(--text-3);background:none;border:0;cursor:pointer;white-space:nowrap;transition:color .15s,background .15s}
+  .pane-tabs button span{overflow:hidden;text-overflow:ellipsis}
+  .pane-tabs button .ic{flex:0 0 auto;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .pane-tabs button:hover{color:var(--text);background:rgba(15,247,150,.06)}
+  .pane-tabs button[aria-selected=true]{color:var(--accent);background:linear-gradient(180deg,transparent,rgba(15,247,150,.1))}
+  .pane-tabs button[aria-selected=true]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .setpane.tabbed > .setsec:not(.cur){display:none !important}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
@@ -6152,6 +6167,47 @@ function kickForm() {
     });
     return r;
   };
+})();
+
+/* ---------- 统计卡补图标 ---------- */
+(function statIcons() {
+  const map = [[/成功率/, 'target'], [/耗时|用时/, 'clock'], [/花费|金额|总额/, 'coin'], [/成交/, 'check']];
+  function run() {
+    document.querySelectorAll('.stat .k').forEach(k => {
+      if (k.querySelector('svg.ic')) return;
+      const hit = map.find(m => m[0].test(k.textContent)); if (hit) k.insertAdjacentHTML('afterbegin', ic(hit[1]));
+    });
+  }
+  run(); setTimeout(run, 800);
+})();
+
+/* ---------- 设置页：长分组改页签 ---------- */
+(function paneTabs() {
+  const iconFor = t => /热键/.test(t) ? 'list' : /区域|截图/.test(t) ? 'camera' : /标定/.test(t) ? 'target' : /检查/.test(t) ? 'check'
+    : /校准|时间|休市|倒计/.test(t) ? 'clock' : /价格|筛选/.test(t) ? 'coin' : /收藏|关注/.test(t) ? 'star' : /模式|运行/.test(t) ? 'play'
+    : /环境|安全|停止|自动/.test(t) ? 'power' : /抢购/.test(t) ? 'cursor' : 'list';
+  document.querySelectorAll('.setpane').forEach(pane => {
+    const secs = Array.from(pane.children).filter(c => c.classList.contains('setsec'));
+    if (secs.length < 4 || pane.querySelector(':scope > .pane-tabs')) return;
+    const label = el => {
+      const n = el.querySelector('.ss-title, h3, summary b'); let t = (n ? n.textContent : el.textContent).trim();
+      return t.replace(/^高级设置\s*→\s*/, '').replace(/（.*?）/g, '');
+    };
+    const bar = document.createElement('div'); bar.className = 'pane-tabs'; bar.setAttribute('role', 'tablist');
+    secs.forEach((el, k) => {
+      const t = label(el);
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'tab'); b.dataset.i = String(k);
+      b.innerHTML = ic(iconFor(t)) + '<span>' + t.replace(/[<>&]/g, '') + '</span>';
+      bar.appendChild(b);
+    });
+    function show(k) {
+      secs.forEach((el, j) => el.classList.toggle('cur', j === k));
+      bar.querySelectorAll('button').forEach((b, j) => b.setAttribute('aria-selected', String(j === k)));
+    }
+    bar.addEventListener('click', e => { const b = e.target.closest('button'); if (b) show(Number(b.dataset.i)); });
+    pane.insertBefore(bar, pane.firstChild); pane.classList.add('tabbed'); show(0);
+    secs.forEach(el => { const sum = el.querySelector(':scope > .setsec-sum'); if (sum) sum.style.display = 'none'; const h = el.querySelector(':scope > h3'); if (h) h.style.display = 'none'; });
+  });
 })();
 </script>
 <!-- CLICK-BURST-NOTICE END -->
