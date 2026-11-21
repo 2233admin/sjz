@@ -57,7 +57,7 @@ class Card:
     name: str = "QBZ95-1突击步枪-王牌之剑"
     craft: str = "优品"
     wear: str = "成色B"
-    price: int = 2050
+    price: int | None = 2050      # None = 卡面上价格读不出（只画「暂无」）
 
 
 def default_cards():
@@ -106,7 +106,7 @@ class FakeMarket:
                 hit = "confirm"
                 if self.outcome == "success":
                     self.page = "success"
-                    self.balance -= self.cards[self.selected].price
+                    self.balance -= self.cards[self.selected].price or 0
                     self.purchases.append(self.cards[self.selected])
                 else:
                     self.page = self.outcome
@@ -161,7 +161,7 @@ class FakeMarket:
                       fill=(150, 156, 160))
             d.text((x0 + 6, y1 - 42), f"{c.craft} | {c.wear}", font=f_small,
                    fill=(160, 170, 175))
-            price = f"{c.price:,}"
+            price = "暂无" if c.price is None else f"{c.price:,}"
             pw = d.textlength(price, font=f_price)
             d.text((x1 - 8 - pw, y1 - 44), price, font=f_price, fill=(235, 238, 240))
             d.ellipse([x1 - 46 - pw, y1 - 40, x1 - 22 - pw, y1 - 16], fill=(190, 160, 90))
@@ -177,7 +177,7 @@ class FakeMarket:
         x0, y0, x1, y1 = BUY_BTN
         d.rectangle([x0 + 10, y0 + 4, x1 - 10, y1 - 4], outline=(60, 200, 130), width=3,
                     fill=(20, 40, 36))
-        d.text((x0 + 80, y0 + 14), f"{c.price:,}", font=f_price, fill=(235, 70, 70))
+        d.text((x0 + 80, y0 + 14), "暂无" if c.price is None else f"{c.price:,}", font=f_price, fill=(235, 70, 70))
 
     def _draw_dialog(self, d, title, ok_text, cancel=False):
         f_title, f_btn = _font(34), _font(28)
