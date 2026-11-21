@@ -1199,6 +1199,24 @@
   #panelTaskSet .set-sum.off b{color:var(--warn)}
   .set-sum .sum-on{display:block;margin-top:6px;font:inherit;font-size:11.5px;font-weight:700;color:#04140c;background:var(--accent);border:0;padding:3px 12px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}
   .set-sum .sum-on:hover{filter:brightness(1.12)}
+  /* ---------- 任务设置：分段页签（不再整条滚动）+ 操作图标 ---------- */
+  #panelTaskSet .set-form > .set-grp{display:none !important}
+  #panelTaskSet .set-form[data-sec="1"] > [data-sec]:not([data-sec="1"]),
+  #panelTaskSet .set-form[data-sec="2"] > [data-sec]:not([data-sec="2"]),
+  #panelTaskSet .set-form[data-sec="3"] > [data-sec]:not([data-sec="3"]){display:none !important}
+  .set-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:2px 0 4px;border-bottom:1px solid var(--brass-dim)}
+  .set-tabs button{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 4px 7px;font:inherit;font-size:12px;font-weight:600;color:var(--text-3);background:none;border:0;cursor:pointer;transition:color .15s,background .15s}
+  .set-tabs button .ic{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .set-tabs button:hover{color:var(--text);background:rgba(15,247,150,.06)}
+  .set-tabs button[aria-selected=true]{color:var(--accent);background:linear-gradient(180deg,transparent,rgba(15,247,150,.1))}
+  .set-tabs button[aria-selected=true]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .set-tabs button.bad::before{content:"";position:absolute;top:6px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--bad)}
+  #panelTaskSet .chip .ic,#panelTaskSet .seg .ic,#panelTaskSet .btn .ic,.set-switch-row .ic{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto;vertical-align:-2px;margin-right:4px}
+  #panelTaskSet .seg button{display:inline-flex;align-items:center;justify-content:center}
+  #panelTaskSet .set-form > .fld{animation:secIn .18s ease-out both}
+  @keyframes secIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+  #setWorkflow{display:grid !important;grid-template-columns:1fr !important}
+  #setWorkflow button{justify-content:flex-start !important;padding:7px 12px !important;text-align:left}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
@@ -6072,6 +6090,66 @@ function kickForm() {
     const r = orig.apply(this, arguments);
     /* 只在“从没选中到选中”时播一次；任务间切换不再重放，避免一点就闪 */
     if (S.sel !== lastSel) { if (lastSel == null && S.sel != null) kickForm(); lastSel = S.sel; }
+    return r;
+  };
+})();
+
+/* ---------- 任务设置：三段页签 + 图标 ---------- */
+(function setTabs() {
+  const form = document.getElementById('setForm'); if (!form) return;
+  Object.assign(IC, {
+    coin: 'M8 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8 4.8v6.4M10 6.3c-.4-.6-1.1-.9-2-.9-1.1 0-2 .5-2 1.3s.9 1.1 2 1.3 2 .5 2 1.3-.9 1.3-2 1.3c-.9 0-1.6-.3-2-.9',
+    clock: 'M8 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8 4.5V8l2.5 1.5',
+    trash: 'M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5M7 7v4M9 7v4',
+    swap: 'M3 5.5h9.5M10 3l2.5 2.5L10 8M13 10.5H3.5M6 8l-2.5 2.5L6 13',
+    inf: 'M5 10.5a2.5 2.5 0 1 1 0-5c2.5 0 3.5 5 6 5a2.5 2.5 0 1 0 0-5c-2.5 0-3.5 5-6 5z',
+    list: 'M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.1M2.5 8h.1M2.5 12h.1',
+    glass: 'M4 2.5h8M4 13.5h8M4.5 2.5c0 3 3.5 3.5 3.5 5.5s-3.5 2.5-3.5 5.5M11.5 2.5c0 3-3.5 3.5-3.5 5.5s3.5 2.5 3.5 5.5',
+    cursor: 'M5 2.5l7 5-3 .8 1.8 3.5-1.5.8L7.5 9.1 5 11z',
+    hand: 'M6 8V3.5a1 1 0 0 1 2 0V7m0-1.5a1 1 0 0 1 2 0V8m0-1.5a1 1 0 0 1 2 0V10c0 2.5-1.5 4-4 4-2 0-3-1-4-3L3 8.5a1 1 0 0 1 1.7-.8L6 9',
+    gem: 'M4 3h8l2.5 3.5L8 14 1.5 6.5zM1.5 6.5h13M5.5 3L8 6.5 10.5 3M8 6.5V14'
+  });
+  const secs = [['target', '要抢什么'], ['coin', '价格数量'], ['clock', '时间路线']];
+  let g = 0;
+  Array.from(form.children).forEach(el => {
+    if (el.classList.contains('set-grp')) { g++; return; }
+    if (g && !el.querySelector('#setEnabled')) el.dataset.sec = String(g);
+  });
+  const bar = document.createElement('div'); bar.className = 'set-tabs'; bar.setAttribute('role', 'tablist');
+  bar.innerHTML = secs.map((x, k) => `<button type="button" role="tab" data-sec-tab="${k + 1}" aria-selected="${k === 0}">${ic(x[0])}${x[1]}</button>`).join('');
+  const sum = document.getElementById('setSum'); sum.after(bar);
+  function show(n) {
+    form.dataset.sec = String(n);
+    bar.querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.secTab === String(n))));
+  }
+  show(1);
+  bar.addEventListener('click', e => { const b = e.target.closest('button'); if (b) show(b.dataset.secTab); });
+  bar.addEventListener('keydown', e => {
+    const cur = Number(form.dataset.sec) || 1;
+    if (e.key === 'ArrowRight') { show(Math.min(3, cur + 1)); bar.querySelector('[aria-selected=true]').focus(); }
+    if (e.key === 'ArrowLeft') { show(Math.max(1, cur - 1)); bar.querySelector('[aria-selected=true]').focus(); }
+  });
+  /* 图标：只补不改，文字保留 */
+  const put = (sel, icon) => document.querySelectorAll(sel).forEach(el => { if (!el.querySelector('svg.ic')) el.insertAdjacentHTML('afterbegin', ic(icon)); });
+  put('#setCraft [data-craft=""]', 'inf'); put('#setCraft [data-craft="极品"]', 'gem'); put('#setCraft [data-craft="优品"]', 'star');
+  put('#setWorkflow [data-wf="countdown"]', 'glass'); put('#setWorkflow [data-wf="list"]', 'list'); put('#setWorkflow [data-wf="detail"]', 'cursor');
+  put('#setForm .chip[data-swap]', 'swap'); put('#setForm .chip[data-fire]', 'clock');
+  document.querySelectorAll('#setForm .chip[data-for]').forEach(c => {
+    if (c.querySelector('svg.ic')) return;
+    if (c.dataset.for === 'setFireAt') c.insertAdjacentHTML('afterbegin', ic('hand'));
+    else if (c.dataset.val === '') c.insertAdjacentHTML('afterbegin', ic('inf'));
+    else if (c.dataset.val === '0.12') c.insertAdjacentHTML('afterbegin', ic('star'));
+  });
+  put('#btnTaskSave', 'save'); put('#btnTaskDel', 'trash');
+  const lab = document.querySelector('label[for="setEnabled"]'); if (lab) { lab.parentNode.classList.add('set-switch-row'); }
+  /* 隐藏页签里有报错时，在页签上亮红点 */
+  const v0 = window.validateTaskForm;
+  if (typeof v0 === 'function') window.validateTaskForm = function () {
+    const r = v0.apply(this, arguments);
+    bar.querySelectorAll('button').forEach(b => {
+      const bad = !!form.querySelector('[data-sec="' + b.dataset.secTab + '"] .fmsg.err');
+      b.classList.toggle('bad', bad);
+    });
     return r;
   };
 })();
