@@ -2467,6 +2467,7 @@ async function poll() {
     const prev = S.status;
     S.status = st;
     if (st && Array.isArray(st.tasks)) S.tasks = st.tasks;
+    notifyBought(prev, st);
     S.guard = (gs && gs.guard) || null;
     if (taskMode === 'error' && Array.isArray(st && st.tasks)) { taskMode = 'ok'; taskErr = ''; renderTaskTable(true); }
     paintLive(prev);
@@ -2482,6 +2483,21 @@ async function poll() {
   } finally {
     S.pollBusy = false;
   }
+}
+/* 抢到了要让人知道：对比两次轮询里每条任务的 bought，增加就弹一次 */
+function notifyBought(prev, st) {
+  if (!prev || !st || !Array.isArray(prev.tasks) || !Array.isArray(st.tasks)) return;
+  const was = {};
+  prev.tasks.forEach(t => { was[String(t.id)] = +t.bought || 0; });
+  st.tasks.forEach(t => {
+    const before = was[String(t.id)];
+    const now = +t.bought || 0;
+    if (before == null || now <= before) return;
+    const quota = +t.quota || 0;
+    const left = quota ? Math.max(0, quota - now) : null;
+    const nm = taskTitle(t, 0);
+    toast(`抢到了：${nm}` + (quota ? `（${now}/${quota} 件${left === 0 ? '，这条任务完成' : ''}）` : ''), 'ok');
+  });
 }
 function paintPollError(e) {
   const why = humanize(e);
@@ -2535,7 +2551,7 @@ async function handleStart() {
   }
   if (!r || r.ok === false) { await startFailed(new Error((r && r.msg) || '启动没有成功')); return; }
   clearException();
-  toast('已开始抢购', 'ok');
+  { const n = (S.tasks || []).filter(t => t.enabled !== false && !['done', 'failed', 'skipped'].includes(t.status)).length; toast(n ? `已开始抢购，队列里 ${n} 条任务` : '已开始抢购', 'ok'); }
   setGlobal('ok', '已开始抢购', '', '运行中');
   poll();
 }
@@ -3257,7 +3273,7 @@ async function saveTask() {
     else { const t = taskById(S.sel); if (t) Object.assign(t, p); }
     S.dirty = false;
     renderTaskTable(); renderTaskForm();
-    toast('任务已保存', 'ok');
+    { const t = taskById(S.sel); toast('已保存' + (t ? '「' + taskTitle(t, 0) + '」' : '任务') + '，下次启动按新设置抢', 'ok'); }
   } catch (e) {
     $('#setStatus').textContent = '没保存成功';
     toast(humanize(e), 'err');
@@ -3319,7 +3335,7 @@ async function clearDone() {
   try {
     await api('/api/tasks/clear');
     await loadTasks(true);
-    toast('已清理', 'ok');
+    toast(`已清理 ${doneN} 条已结束任务`, 'ok');
   } catch (e) { toast(humanize(e), 'err'); }
 }
 
@@ -3354,7 +3370,7 @@ async function addTask() {
     await loadTasks(true);
     const newId = r.task && r.task.id != null ? r.task.id : (Array.isArray(r.tasks) && r.tasks.length ? r.tasks[r.tasks.length - 1].id : null);
     if (newId != null) { S.sel = newId; renderTaskTable(true); renderTaskForm(); }
-    toast('任务已添加', 'ok');
+    toast(max === 0 ? '任务已添加。最高单价没填，会按任何价格买，建议在右侧补上上限' : '任务已添加，在右侧可继续调整细项', max === 0 ? 'warn' : 'ok');
     setGlobal('ok', '任务已添加', name || kw, '正常');
   } catch (e) {
     $('#addMsg').textContent = humanize(e);
