@@ -920,13 +920,13 @@
   .btn.danger-solid{background:linear-gradient(180deg,#d9525b,#c43d46)}
   .panel-head{position:relative;padding-left:12px}
   .panel-head::before{content:"";position:absolute;left:2px;top:50%;width:4px;height:60%;transform:translateY(-50%) skewX(-18deg);background:var(--accent)}
-  .panel-head h2{font-style:italic;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .panel-head h2{font-weight:800;letter-spacing:.16em}
   .tag{padding:0 7px;height:17px;transform:skewX(-14deg);background:rgba(255,255,255,.07);border-left:2px solid currentColor}
   .tag>*{display:inline-block;transform:skewX(14deg)}
   .tag.s,.tag.a,.tag.info,.tag.hit{background:rgba(15,247,150,.12)}
   .tag.bad{background:rgba(240,96,106,.16)}
   .tag.warn,.tag.b,.tag.gold{background:rgba(232,176,75,.16)}
-  .tabs button.on,.side-tabs button.on{font-style:italic;font-weight:800;border-bottom-width:3px}
+  .tabs button.on,.side-tabs button.on{font-weight:800;border-bottom-width:3px}
   .chip{clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);padding:2px 10px;border:0;background:rgba(255,255,255,.06);text-decoration:none;color:var(--text-2)}
   .chip:hover{background:rgba(15,247,150,.14);color:var(--accent)}
   dialog.dialog{clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));border-color:var(--accent)}
@@ -962,9 +962,9 @@
   @keyframes cfFade{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
   .setnav button{position:relative;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);font-weight:700;letter-spacing:.06em;transition:background .15s,color .15s,padding .15s}
   .setnav button:hover{padding-left:calc(var(--pl,12px) + 4px);color:var(--text)}
-  .setnav button.on{background:linear-gradient(90deg,rgba(15,247,150,.18),rgba(15,247,150,.02));box-shadow:inset 3px 0 0 var(--accent);color:#fff;font-style:italic}
+  .setnav button.on{background:linear-gradient(90deg,rgba(15,247,150,.18),rgba(15,247,150,.02));box-shadow:inset 3px 0 0 var(--accent);color:#fff}
   .setnav button.on .sn-ico{color:var(--accent)}
-  .setpane h3{position:relative;padding:2px 0 8px 14px;font-style:italic;font-weight:800;letter-spacing:.14em;text-transform:uppercase;border-bottom:1px solid var(--line-2);animation:cfFade .3s cubic-bezier(.2,.8,.2,1) both}
+  .setpane h3{position:relative;padding:2px 0 8px 14px;font-weight:800;letter-spacing:.16em;border-bottom:1px solid var(--line-2);animation:cfFade .3s cubic-bezier(.2,.8,.2,1) both}
   .setpane h3::before{content:"";position:absolute;left:2px;top:3px;width:4px;height:calc(100% - 12px);transform:skewX(-18deg);background:var(--accent)}
   .setpane h3::after{content:"";position:absolute;right:0;bottom:-1px;width:56px;height:3px;background:repeating-linear-gradient(-45deg,var(--accent) 0 5px,transparent 5px 10px)}
   .setrow{position:relative;transition:background .15s;animation:cfFade .3s cubic-bezier(.2,.8,.2,1) both}
@@ -978,7 +978,7 @@
   /* 方舟/终末地式细节：面板四角的小直角标记，细线、等宽小标签 */
   .panel{background-image:linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent));
     background-repeat:no-repeat;background-size:10px 1px,1px 10px,10px 1px,1px 10px;background-position:right top,right top,right bottom,right bottom;background-origin:border-box;opacity:1}
-  .panel-head .sub,.hint,.k{font-family:'Cascadia Mono',Consolas,monospace;letter-spacing:.02em}
+  .panel-head .sub,.k{letter-spacing:.04em}
 
   /* ---------- 全息 HUD 层：网格底、扫描线、扫描光束、发光描边、四角括号、数字荧光 ---------- */
   @keyframes hudBeam{0%{transform:translateY(-12vh)}100%{transform:translateY(112vh)}}
@@ -1028,6 +1028,17 @@
   .globalbar > *:not(#scope){position:relative;z-index:1}
   #scope{position:absolute !important;inset:0;width:100%;height:100%;z-index:0 !important;pointer-events:none}
   .g-txt,.g-detail,.g-state,.g-clock{text-shadow:0 0 6px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.9)}
+
+  /* ---------- 示波器屏：系统状态与信息都在屏上以 OSD 读数显示，波形在下半区 ---------- */
+  .globalbar{flex:0 0 52px !important;height:52px !important;align-items:flex-start !important;padding:6px 14px 0 !important;
+    background:#050b08 !important;border-bottom:1px solid rgba(15,247,150,.35) !important;
+    box-shadow:inset 0 0 22px rgba(15,247,150,.08)}
+  .globalbar .g-txt{color:#b8ffe0;font-weight:600;letter-spacing:.04em;text-shadow:0 0 8px rgba(15,247,150,.55)}
+  .globalbar .g-detail{color:rgba(184,255,224,.62);font-family:var(--font-num);font-size:11px;letter-spacing:.02em}
+  .globalbar .g-state{background:transparent;border:1px solid rgba(15,247,150,.5);color:var(--accent);letter-spacing:.12em;padding:1px 8px;clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px)}
+  .globalbar .g-clock{color:var(--accent);font-family:var(--font-num);font-size:11.5px;letter-spacing:.08em;text-shadow:0 0 6px rgba(15,247,150,.6)}
+  .globalbar .g-ico{margin-top:1px}
+  .globalbar .g-bar{display:none}
 </style>
 <style>
 /* ---------- 迷你控制条：整窗收缩态（同一个 WebView2，只切视图 + resize） ---------- */
@@ -5831,15 +5842,16 @@ document.addEventListener('click', e => {
     ctx.clearRect(0, 0, W, H);
   }
   size(); window.addEventListener('resize', size);
+  const MID = () => 24 + (H - 24) / 2;
   function grat() {
     ctx.save();
     ctx.strokeStyle = 'rgba(15,247,150,.13)'; ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let x = 0; x <= W; x += 40) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); }
-    ctx.moveTo(0, H / 2 + .5); ctx.lineTo(W, H / 2 + .5);
+    for (let x = 0; x <= W; x += 40) { ctx.moveTo(x + .5, 24); ctx.lineTo(x + .5, H); }
+    ctx.moveTo(0, MID() + .5); ctx.lineTo(W, MID() + .5);
     ctx.stroke();
     ctx.strokeStyle = 'rgba(15,247,150,.28)'; ctx.beginPath();
-    for (let x = 0; x <= W; x += 8) { ctx.moveTo(x + .5, H / 2 - 3); ctx.lineTo(x + .5, H / 2 + 3); }
+    for (let x = 0; x <= W; x += 8) { ctx.moveTo(x + .5, MID() - 3); ctx.lineTo(x + .5, MID() + 3); }
     ctx.stroke(); ctx.restore();
   }
   function frame() {
@@ -5861,7 +5873,7 @@ document.addEventListener('click', e => {
     ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'source-over';
     grat();
-    const mid = H / 2, A = H * 0.42 * amp;
+    const TOP = 24, mid = TOP + (H - TOP) / 2, A = (H - TOP) * 0.42 * amp;
     const bad = (S.guard && S.guard.alert) || (st.engine && st.engine.state === 'abort');
     const col = bad ? '240,96,106' : '15,247,150';
     ctx.lineWidth = 1.6; ctx.lineJoin = 'round';
